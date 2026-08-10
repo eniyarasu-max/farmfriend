@@ -1,0 +1,1780 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FarmFriend - Smart Agriculture Hub</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root {
+      --moss: #4a7a63;
+      --moss-deep: #2f5744;
+      --moss-soft: #6f9c82;
+      --sage: #a9d0b6;
+      --dew: #eef6ef;
+      --cream: #faf8f2;
+      --clay: #e7876b;
+      --clay-deep: #c9663f;
+      --sky: #7fb0c9;
+      --ink: #26382f;
+      --muted: #64756a;
+      --glass: rgba(255, 255, 255, 0.46);
+      --glass-soft: rgba(255, 255, 255, 0.30);
+      --glass-border: rgba(255, 255, 255, 0.65);
+      --danger: #d1604a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Manrope', sans-serif; }
+
+    h1, h2, h3, .display {
+      font-family: 'Fraunces', serif;
+      letter-spacing: -0.3px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-x: hidden;
+      background: linear-gradient(160deg, #eef6ef 0%, #e2f0e6 35%, #d7ebdd 65%, #cfe6d7 100%);
+    }
+
+    /* ---- Ambient liquid blobs (fixed, behind everything) ---- */
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(70px);
+      opacity: 0.5;
+      z-index: 0;
+      pointer-events: none;
+      animation: drift 28s ease-in-out infinite;
+    }
+    .blob-a { width: 480px; height: 480px; background: radial-gradient(circle at 30% 30%, #b3e0c1, transparent 70%); top: -160px; left: -140px; }
+    .blob-b { width: 420px; height: 420px; background: radial-gradient(circle at 60% 40%, #f3cba9, transparent 70%); bottom: -160px; right: -100px; animation-duration: 34s; animation-delay: -8s; }
+    .blob-c { width: 300px; height: 300px; background: radial-gradient(circle at 50% 50%, #cdeee0, transparent 70%); top: 40%; right: 15%; animation-duration: 24s; animation-delay: -4s; }
+
+    @keyframes drift {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(30px, -20px) scale(1.05); }
+      66% { transform: translate(-25px, 15px) scale(0.97); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .blob, .sprout-svg-container { animation: none !important; }
+    }
+
+    /* ---- Glass utility ---- */
+    .glass {
+      background: var(--glass);
+      backdrop-filter: blur(20px) saturate(150%);
+      -webkit-backdrop-filter: blur(20px) saturate(150%);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 12px 34px rgba(47, 87, 68, 0.12), inset 0 1px 0 rgba(255,255,255,0.55);
+    }
+
+    /* ---- Navbar ---- */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      color: var(--moss-deep);
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(18px) saturate(160%);
+      -webkit-backdrop-filter: blur(18px) saturate(160%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--moss-deep);
+    }
+    .brand i { color: var(--moss); }
+
+    .user-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+    #user-display { font-size: 13.5px; color: var(--muted); font-weight: 600; }
+
+    .btn-admin, .btn-logout {
+      border: none;
+      padding: 9px 16px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+      font-family: 'Manrope', sans-serif;
+    }
+    .btn-admin:hover, .btn-logout:hover { transform: translateY(-1px); }
+
+    .btn-admin {
+      background: rgba(74, 122, 99, 0.14);
+      color: var(--moss-deep);
+      border: 1px solid rgba(74, 122, 99, 0.25);
+    }
+    .btn-admin:hover { background: rgba(74, 122, 99, 0.22); }
+
+    .btn-logout {
+      background: rgba(209, 96, 74, 0.14);
+      color: var(--clay-deep);
+      border: 1px solid rgba(209, 96, 74, 0.25);
+    }
+    .btn-logout:hover { background: rgba(209, 96, 74, 0.22); }
+
+    /* ---- Nav tabs ---- */
+    .nav-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 14px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      position: sticky;
+      top: 62px;
+      z-index: 40;
+      background: rgba(238, 246, 239, 0.55);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+
+    .tab-btn {
+      flex: 0 0 auto;
+      background: rgba(255, 255, 255, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      color: var(--muted);
+      padding: 9px 18px;
+      border-radius: 14px;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.25s ease;
+      font-family: 'Manrope', sans-serif;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { background: rgba(255, 255, 255, 0.55); color: var(--moss-deep); }
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--moss) 0%, var(--moss-deep) 100%);
+      color: white;
+      box-shadow: 0 6px 16px rgba(47, 87, 68, 0.3);
+    }
+
+    /* ---- Alert badge on tab ---- */
+    .tab-badge {
+      display: none;
+      background: var(--danger);
+      color: white;
+      font-size: 10.5px;
+      font-weight: 800;
+      line-height: 1;
+      padding: 3px 6px;
+      border-radius: 20px;
+      margin-left: 2px;
+    }
+    .tab-badge.show { display: inline-block; }
+
+    /* ---- Optimum-range alert banners ---- */
+    .alert-stack {
+      max-width: 1100px;
+      margin: 14px auto 0 auto;
+      padding: 0 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      z-index: 2;
+    }
+    .alert-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(209, 96, 74, 0.14);
+      border: 1px solid rgba(209, 96, 74, 0.35);
+      color: var(--clay-deep);
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 600;
+      backdrop-filter: blur(10px);
+      animation: fadeIn 0.3s ease-in-out;
+    }
+    .alert-banner i.alert-icon { font-size: 16px; }
+    .alert-banner .alert-text { flex-grow: 1; line-height: 1.4; }
+    .alert-banner .alert-close {
+      background: none; border: none; cursor: pointer;
+      color: var(--clay-deep); font-size: 18px; line-height: 1;
+      opacity: 0.7; font-family: 'Manrope', sans-serif;
+    }
+    .alert-banner .alert-close:hover { opacity: 1; }
+
+    /* ---- Container ---- */
+    .container {
+      max-width: 1100px;
+      margin: 24px auto 60px auto;
+      padding: 0 18px;
+      width: 100%;
+      flex-grow: 1;
+      position: relative;
+      z-index: 1;
+    }
+
+    .module-section { display: none; animation: fadeIn 0.4s ease-in-out; }
+    .module-section.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card {
+      border-radius: 22px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .module-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+
+    .module-clipart {
+      font-size: 26px;
+      color: white;
+      background: linear-gradient(135deg, var(--moss) 0%, var(--moss-deep) 100%);
+      width: 52px; height: 52px;
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 6px 16px rgba(47, 87, 68, 0.25);
+    }
+
+    .module-title h2 { font-size: 22px; color: var(--moss-deep); font-weight: 600; }
+    .module-title p { font-size: 13.5px; color: var(--muted); margin-top: 2px; }
+
+    /* ---------------- 1. FARMVOICE MODULE ---------------- */
+    .analytics-controls { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+
+    .time-btn {
+      padding: 8px 16px;
+      border: 1.5px solid rgba(74, 122, 99, 0.3);
+      background: rgba(255, 255, 255, 0.4);
+      color: var(--moss-deep);
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: 'Manrope', sans-serif;
+      transition: all 0.2s ease;
+    }
+    .time-btn.active { background: var(--moss-deep); color: white; border-color: var(--moss-deep); }
+
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .stat-chip {
+      background: rgba(255, 255, 255, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      border-radius: 14px;
+      padding: 12px 14px;
+    }
+    .stat-chip .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); font-weight: 700; }
+    .stat-chip .stat-value { font-family: 'Fraunces', serif; font-size: 20px; color: var(--moss-deep); margin-top: 2px; }
+    .stat-chip .stat-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+    .chart-container { position: relative; height: 300px; width: 100%; }
+
+    .history-timeline { margin-top: 16px; max-height: 240px; overflow-y: auto; }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 11px 14px;
+      border-bottom: 1px solid rgba(74, 122, 99, 0.1);
+      font-size: 13px;
+    }
+    .history-item:last-child { border-bottom: none; }
+
+    /* ---------------- 2. PLANTCYCLOPEDIA MODULE ---------------- */
+    .plant-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; }
+
+    .plant-card {
+      background: rgba(255, 255, 255, 0.42);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 18px;
+      overflow: hidden;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .plant-card:hover {
+      border-color: var(--sage);
+      transform: translateY(-5px);
+      box-shadow: 0 14px 28px rgba(47, 87, 68, 0.16);
+    }
+
+    .plant-img-container {
+      width: 100%;
+      height: 130px;
+      background: linear-gradient(135deg, var(--moss-soft) 0%, var(--sage) 100%);
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .plant-card-icon { font-size: 50px; color: #ffffff; text-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+    .plant-img { width: 100%; height: 100%; object-fit: cover; }
+
+    .plant-card-body { padding: 14px; text-align: center; }
+    .plant-card-body h3 { color: var(--moss-deep); font-size: 15.5px; margin-bottom: 4px; font-weight: 600; }
+    .plant-card-body p { color: var(--muted); }
+
+    .delete-card-btn {
+      position: absolute; top: 8px; right: 10px;
+      background: var(--danger); color: white; border: none;
+      width: 26px; height: 26px; border-radius: 50%;
+      font-weight: bold; cursor: pointer; display: none;
+      align-items: center; justify-content: center; z-index: 10;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    /* ---- Modals ---- */
+    .custom-modal {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(38, 56, 47, 0.45);
+      backdrop-filter: blur(4px);
+      justify-content: center; align-items: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+
+    .modal-content {
+      background: rgba(250, 248, 242, 0.92);
+      backdrop-filter: blur(24px) saturate(160%);
+      -webkit-backdrop-filter: blur(24px) saturate(160%);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      padding: 28px;
+      border-radius: 24px;
+      max-width: 550px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      position: relative;
+      text-align: center;
+      box-shadow: 0 24px 60px rgba(38, 56, 47, 0.3);
+    }
+
+    .modal-banner-container {
+      width: 100%; height: 150px;
+      background: linear-gradient(135deg, var(--moss-deep) 0%, var(--moss) 100%);
+      border-radius: 16px; margin-bottom: 15px;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+    .modal-banner-icon { font-size: 64px; color: white; }
+    .modal-banner-img { width: 100%; height: 100%; object-fit: cover; }
+
+    .close-modal {
+      position: absolute; top: 14px; right: 16px;
+      font-size: 20px; cursor: pointer; color: #fff;
+      background: rgba(38, 56, 47, 0.5);
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 20;
+    }
+
+    .metric-comparison { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; }
+    .metric-box { background: rgba(74, 122, 99, 0.1); padding: 12px; border-radius: 12px; }
+    .metric-box strong { display: block; font-size: 11px; color: var(--moss-deep); text-transform: uppercase; letter-spacing: 0.3px; }
+    .metric-box span { font-size: 13.5px; font-weight: 600; }
+
+    /* ---- Admin forms ---- */
+    .admin-form-group { text-align: left; margin-bottom: 13px; }
+    .admin-form-group label { display: block; font-size: 12.5px; font-weight: 700; color: var(--moss-deep); margin-bottom: 4px; }
+    .admin-form-group input, .admin-form-group textarea {
+      width: 100%; padding: 10px 12px;
+      border: 1.5px solid rgba(74, 122, 99, 0.25);
+      border-radius: 10px; outline: none;
+      background: rgba(255,255,255,0.6);
+      font-family: 'Manrope', sans-serif;
+      font-size: 13.5px;
+    }
+    .admin-form-group input:focus, .admin-form-group textarea:focus { border-color: var(--moss); }
+
+    .admin-delete-list { margin-top: 12px; text-align: left; max-height: 180px; overflow-y: auto; }
+    .admin-delete-item { display: flex; justify-content: space-between; align-items: center; padding: 9px 4px; border-bottom: 1px solid rgba(74,122,99,0.12); font-size: 13.5px; }
+
+    .btn-delete-item {
+      background: rgba(209, 96, 74, 0.15); color: var(--clay-deep);
+      border: 1px solid rgba(209, 96, 74, 0.3);
+      padding: 5px 10px; border-radius: 8px; font-size: 11.5px; font-weight: 700; cursor: pointer;
+    }
+
+    .btn-block {
+      width: 100%; justify-content: center; padding: 12px;
+      border: none; border-radius: 12px; font-weight: 700; font-size: 13.5px;
+      color: white; cursor: pointer; display: flex; align-items: center; gap: 8px;
+      font-family: 'Manrope', sans-serif;
+      transition: transform 0.15s ease;
+    }
+    .btn-block:hover { transform: translateY(-1px); }
+    .btn-primary { background: linear-gradient(135deg, var(--moss) 0%, var(--moss-deep) 100%); }
+    .btn-secondary { background: linear-gradient(135deg, var(--sky) 0%, #5c8aa3 100%); }
+    .btn-tertiary { background: linear-gradient(135deg, var(--sage) 0%, var(--moss) 100%); }
+
+    hr.divider { margin: 20px 0; border: 0; border-top: 1px solid rgba(74,122,99,0.15); }
+
+    /* ---------------- 3. ORGANIC FARMING MODULE ---------------- */
+    .pdf-list { display: flex; flex-direction: column; gap: 12px; }
+    .pdf-item {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      flex-wrap: wrap;
+      padding: 14px 16px;
+      border: 1px solid rgba(255,255,255,0.55);
+      background: rgba(255,255,255,0.4);
+      border-radius: 16px;
+      position: relative;
+    }
+    .pdf-info { display: flex; align-items: center; gap: 14px; }
+    .pdf-clipart { font-size: 26px; color: var(--clay-deep); }
+    .pdf-info strong { font-size: 14px; }
+    .pdf-info p { color: var(--muted); font-size: 12px; }
+
+    .btn-view {
+      background: var(--moss); color: white; padding: 8px 16px;
+      border-radius: 10px; text-decoration: none; font-size: 12.5px;
+      font-weight: 700; cursor: pointer; border: none;
+      font-family: 'Manrope', sans-serif;
+    }
+
+    /* ---------------- 4. SPROUT AI MODULE ---------------- */
+    .sprout-card { text-align: center; padding: 36px 20px; }
+
+    .sprout-svg-container {
+      width: 170px; height: 170px; margin: 0 auto 8px auto;
+      filter: drop-shadow(0 10px 16px rgba(47,87,68,0.18));
+      animation: floatWorm 3s infinite ease-in-out;
+    }
+    @keyframes floatWorm {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-12px) rotate(4deg); }
+    }
+
+    .sprout-card h2 { color: var(--moss-deep); font-size: 24px; }
+    .sprout-card > p { color: var(--muted); margin-top: 4px; }
+
+    .badge-progress {
+      display: inline-block;
+      background: rgba(231, 135, 107, 0.16);
+      color: var(--clay-deep);
+      border: 1px solid rgba(231, 135, 107, 0.3);
+      padding: 6px 16px; border-radius: 20px; font-size: 12.5px;
+      font-weight: 700; margin-top: 14px;
+    }
+
+    /* ---- Sprout AI: active crop + insights + chat ---- */
+    .sprout-setup { text-align: left; margin-bottom: 4px; }
+    .sprout-setup label {
+      font-size: 12.5px; font-weight: 700; color: var(--moss-deep);
+      display: block; margin-bottom: 6px;
+    }
+    .sprout-setup select {
+      width: 100%; padding: 10px 14px; border-radius: 12px;
+      border: 1px solid rgba(74,122,99,0.3); background: rgba(255,255,255,0.6);
+      font-family: 'Manrope', sans-serif; font-size: 13.5px; color: var(--ink);
+      cursor: pointer;
+    }
+
+    .sprout-insights {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+      text-align: left;
+    }
+    .insight-card {
+      background: rgba(255,255,255,0.5);
+      border: 1px solid rgba(255,255,255,0.65);
+      border-radius: 16px;
+      padding: 14px 16px;
+    }
+    .insight-card.ok { border-left: 4px solid var(--moss); }
+    .insight-card.warn { border-left: 4px solid var(--danger); }
+    .insight-card .insight-label { font-size: 11.5px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+    .insight-card .insight-value { font-size: 20px; font-weight: 800; color: var(--moss-deep); margin: 4px 0 6px 0; font-family: 'Fraunces', serif; }
+    .insight-card .insight-tip { font-size: 12.5px; color: var(--ink); line-height: 1.4; }
+
+    .sprout-chat {
+      margin-top: 22px; text-align: left;
+      background: rgba(255,255,255,0.45);
+      border: 1px solid rgba(255,255,255,0.6);
+      border-radius: 18px; padding: 16px;
+    }
+    .sprout-chat h3 { font-size: 14.5px; color: var(--moss-deep); margin-bottom: 10px; }
+    .sprout-chat-log {
+      max-height: 260px; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 8px;
+      margin-bottom: 10px; padding-right: 4px;
+    }
+    .chat-msg { padding: 9px 13px; border-radius: 14px; font-size: 13px; line-height: 1.45; max-width: 85%; }
+    .chat-msg.user { align-self: flex-end; background: var(--moss); color: white; border-bottom-right-radius: 4px; }
+    .chat-msg.bot { align-self: flex-start; background: rgba(255,255,255,0.75); color: var(--ink); border-bottom-left-radius: 4px; }
+    .chat-msg.bot.typing { color: var(--muted); font-style: italic; }
+    .chat-msg.bot.error { background: rgba(209, 96, 74, 0.14); color: var(--clay-deep); }
+    .sprout-chat-input-row { display: flex; gap: 8px; }
+    .sprout-chat-input-row input {
+      flex-grow: 1; padding: 10px 14px; border-radius: 12px;
+      border: 1px solid rgba(74,122,99,0.3); background: rgba(255,255,255,0.6);
+      font-family: 'Manrope', sans-serif; font-size: 13.5px;
+    }
+    .sprout-chat-input-row button {
+      background: var(--moss); color: white; border: none;
+      padding: 0 18px; border-radius: 12px; cursor: pointer; font-weight: 700;
+    }
+    .sprout-chat-suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .chip-suggestion {
+      background: rgba(74,122,99,0.12); color: var(--moss-deep);
+      border: 1px solid rgba(74,122,99,0.25); border-radius: 20px;
+      padding: 5px 12px; font-size: 11.5px; cursor: pointer; font-weight: 600;
+    }
+    .chip-suggestion:hover { background: rgba(74,122,99,0.22); }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 640px) {
+      .navbar { padding: 12px 16px; }
+      .brand { font-size: 19px; }
+      .nav-tabs { top: 58px; justify-content: flex-start; }
+      .card { padding: 18px; border-radius: 18px; }
+      .module-title h2 { font-size: 19px; }
+      .chart-container { height: 240px; }
+      .metric-comparison { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+      .modal-content { padding: 20px; border-radius: 18px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="blob blob-a"></div>
+  <div class="blob blob-b"></div>
+  <div class="blob blob-c"></div>
+
+  <!-- Top Navigation Bar -->
+  <div class="navbar">
+    <div class="brand">
+      <i class="fa-solid fa-seedling"></i> FarmFriend
+    </div>
+    <div class="user-actions">
+      <span id="user-display">Loading...</span>
+      <button class="btn-admin" id="admin-panel-btn" onclick="openAdminAuthModal()">
+        <i class="fa-solid fa-user-gear"></i> Admin
+      </button>
+      <button class="btn-logout" id="logout-btn">Logout</button>
+    </div>
+  </div>
+
+  <!-- Optimum-Range Alert Banners -->
+  <div class="alert-stack" id="alert-stack"></div>
+
+  <!-- Navigation Tabs -->
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('farmvoice', event)">
+      <i class="fa-solid fa-chart-line"></i> FarmVoice
+    </button>
+    <button class="tab-btn" onclick="switchTab('plantcyclopedia', event)">
+      <i class="fa-solid fa-book-open-reader"></i> Plantcyclopedia
+    </button>
+    <button class="tab-btn" onclick="switchTab('organic', event)">
+      <i class="fa-solid fa-leaf"></i> Organic Farming
+    </button>
+    <button class="tab-btn" onclick="switchTab('sprout', event)">
+      <i class="fa-solid fa-worm"></i> Sprout AI <span class="tab-badge" id="sprout-alert-badge">0</span>
+    </button>
+  </div>
+
+  <!-- Main Container -->
+  <div class="container">
+
+    <!-- ================= 1. FARMVOICE MODULE ================= -->
+    <div id="farmvoice" class="module-section active">
+      <div class="card glass">
+        <div class="module-header">
+          <div class="module-clipart"><i class="fa-solid fa-volume-high"></i></div>
+          <div class="module-title">
+            <h2>FarmVoice Analytics</h2>
+            <p>"Hear what your farm says"</p>
+          </div>
+        </div>
+
+        <div class="analytics-controls">
+          <button class="time-btn active" onclick="updateTimeFilter('1day', this)">1 Day</button>
+          <button class="time-btn" onclick="updateTimeFilter('1week', this)">1 Week</button>
+          <button class="time-btn" onclick="updateTimeFilter('1month', this)">1 Month</button>
+          <button class="time-btn" onclick="updateTimeFilter('1year', this)">1 Year</button>
+        </div>
+
+        <div class="stat-row" id="stat-row">
+          <!-- Live min/avg/max stat chips rendered dynamically -->
+        </div>
+
+        <div class="chart-container">
+          <canvas id="farmVoiceChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card glass">
+        <h3><i class="fa-solid fa-clock-rotate-left"></i> Live ESP32 Telemetry Records</h3>
+        <div id="history-timeline" class="history-timeline">
+          <p style="color: var(--muted);">Fetching historical records from ESP32...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 2. PLANTCYCLOPEDIA MODULE ================= -->
+    <div id="plantcyclopedia" class="module-section">
+      <div class="card glass">
+        <div class="module-header">
+          <div class="module-clipart"><i class="fa-solid fa-book-bookmark"></i></div>
+          <div class="module-title">
+            <h2>Plantcyclopedia</h2>
+            <p>Crop Wisdom & Optimal Soil Conditions</p>
+          </div>
+        </div>
+
+        <div class="plant-grid" id="plant-grid"></div>
+      </div>
+    </div>
+
+    <!-- ================= 3. ORGANIC FARMING MODULE ================= -->
+    <div id="organic" class="module-section">
+      <div class="card glass">
+        <div class="module-header">
+          <div class="module-clipart"><i class="fa-solid fa-file-pdf"></i></div>
+          <div class="module-title">
+            <h2>Organic Farming Library</h2>
+            <p>PDF Guides for Sustainable & Chemical-Free Agriculture</p>
+          </div>
+        </div>
+
+        <div class="pdf-list" id="pdf-list"></div>
+      </div>
+    </div>
+
+    <!-- ================= 4. SPROUT AI MODULE ================= -->
+    <div id="sprout" class="module-section">
+      <div class="card glass sprout-card">
+        <div class="sprout-svg-container">
+          <svg viewBox="0 0 200 200" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="100" cy="175" rx="55" ry="10" fill="#000000" opacity="0.10" />
+            <path d="M 45 155 C 65 115, 75 160, 105 145 C 135 130, 125 85, 115 55" stroke="#ff8ca3" stroke-width="32"
+              stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <path d="M 45 155 C 65 115, 75 160, 105 145 C 135 130, 125 85, 115 55" stroke="#e66885" stroke-width="32"
+              stroke-linecap="round" stroke-linejoin="round" fill="none" stroke-dasharray="3 14" opacity="0.4" />
+            <path d="M 115 35 C 100 15, 125 5, 128 20 C 135 5, 150 18, 138 32 Z" fill="#52b788" />
+            <path d="M 122 28 C 124 20, 128 15, 130 10" stroke="#2d6a4f" stroke-width="2" stroke-linecap="round" fill="none" />
+            <circle cx="100" cy="48" r="8" fill="#2c3e50" />
+            <circle cx="102" cy="45" r="3" fill="#ffffff" />
+            <path d="M 124 48 Q 131 40 137 48" stroke="#2c3e50" stroke-width="4" stroke-linecap="round" fill="none" />
+            <circle cx="92" cy="58" r="6" fill="#ff477e" opacity="0.4" />
+            <circle cx="138" cy="58" r="6" fill="#ff477e" opacity="0.4" />
+            <path d="M 104 60 Q 117 76 130 60" stroke="#2c3e50" stroke-width="4" stroke-linecap="round" fill="none" />
+            <path d="M 110 67 Q 117 76 124 67 Q 117 72 110 67 Z" fill="#ff477e" />
+          </svg>
+        </div>
+
+        <h2>Meet Sprout! 😉</h2>
+        <p>Your Intelligent Soil Companion & AI Earthworm</p>
+
+        <div class="sprout-setup">
+          <label for="sprout-crop-select"><i class="fa-solid fa-seedling"></i> Which crop are you currently growing?</label>
+          <select id="sprout-crop-select" onchange="onActiveCropChange(this.value)">
+            <option value="">Select a crop to get live insights & alerts...</option>
+          </select>
+        </div>
+
+        <div class="sprout-insights" id="sprout-insights"></div>
+
+        <div class="sprout-chat">
+          <h3><i class="fa-solid fa-comment-dots"></i> Ask Sprout</h3>
+          <div class="sprout-chat-suggestions">
+            <span class="chip-suggestion" onclick="sendSproutMessage('How is my farm doing?')">How is my farm doing?</span>
+            <span class="chip-suggestion" onclick="sendSproutMessage('What is the soil moisture?')">Soil moisture?</span>
+            <span class="chip-suggestion" onclick="sendSproutMessage('Any alerts right now?')">Any alerts?</span>
+            <span class="chip-suggestion" onclick="sendSproutMessage('Tips to improve my soil')">Tips to improve soil</span>
+          </div>
+          <div class="sprout-chat-log" id="sprout-chat-log">
+            <div class="chat-msg bot">Hi, I'm Sprout 🪱 Pick your crop above and ask me anything about your live soil readings!</div>
+          </div>
+          <div class="sprout-chat-input-row">
+            <input type="text" id="sprout-chat-input" placeholder="Ask about temperature, moisture, pH..." onkeydown="if(event.key==='Enter') sendSproutMessage()" />
+            <button onclick="sendSproutMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Plant Details Modal -->
+  <div class="custom-modal" id="plant-modal">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeModal('plant-modal')">&times;</span>
+      <div id="modal-banner" class="modal-banner-container"></div>
+      <h2 id="modal-title" style="color: var(--moss-deep);">Plant Name</h2>
+      <p id="modal-desc" style="font-size: 13px; color: var(--muted); margin-top: 5px;">Description</p>
+
+      <div class="metric-comparison">
+        <div class="metric-box"><strong>Optimal Temp</strong><span id="modal-temp">24-30 °C</span></div>
+        <div class="metric-box"><strong>Optimal pH</strong><span id="modal-ph">6.0 - 7.0</span></div>
+        <div class="metric-box"><strong>Moisture</strong><span id="modal-moisture">60-80%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF Viewer Modal -->
+  <div class="custom-modal" id="pdf-viewer-modal">
+    <div class="modal-content" style="max-width: 850px; height: 90vh; display: flex; flex-direction: column; padding: 18px;">
+      <span class="close-modal" onclick="closeModal('pdf-viewer-modal')">&times;</span>
+      <h3 id="pdf-viewer-title" style="color: var(--moss-deep); margin-bottom: 12px; text-align: left;">Viewing PDF</h3>
+      <iframe id="pdf-frame" style="width: 100%; height: 100%; border: none; border-radius: 12px; background: var(--dew);"></iframe>
+    </div>
+  </div>
+
+  <!-- Admin Login Modal -->
+  <div class="custom-modal" id="admin-auth-modal">
+    <div class="modal-content" style="max-width: 400px;">
+      <span class="close-modal" onclick="closeModal('admin-auth-modal')">&times;</span>
+      <h2 style="color: var(--moss-deep); margin-bottom: 8px;">🔑 Admin Login</h2>
+      <p style="font-size: 13px; color: var(--muted); margin-bottom: 18px;">Enter credentials to manage FarmFriend content</p>
+
+      <div id="admin-auth-error" style="color: var(--danger); font-size: 13px; display: none; margin-bottom: 10px;">
+        Invalid Username or Password!
+      </div>
+
+      <div class="admin-form-group">
+        <label>Username</label>
+        <input type="text" id="admin-user" placeholder="Enter Admin Username" />
+      </div>
+      <div class="admin-form-group">
+        <label>Password</label>
+        <input type="password" id="admin-pass" placeholder="Enter Admin Password" />
+      </div>
+
+      <button onclick="verifyAdminLogin()" class="btn-block btn-primary" style="margin-top: 8px;">
+        Authenticate
+      </button>
+    </div>
+  </div>
+
+  <!-- Admin Panel Management Modal -->
+  <div class="custom-modal" id="admin-panel-modal">
+    <div class="modal-content" style="max-width: 550px;">
+      <span class="close-modal" onclick="closeModal('admin-panel-modal')">&times;</span>
+      <h2 style="color: var(--moss-deep); margin-bottom: 4px;">⚙️ Admin Control Panel</h2>
+      <p style="font-size: 13px; color: var(--muted); margin-bottom: 18px;">Add or Delete Crops & Organic Farming PDFs</p>
+
+      <h3 style="text-align: left; font-size: 14.5px; color: var(--moss); margin-bottom: 10px;">🌱 Add New Crop</h3>
+      <form id="add-plant-form" onsubmit="savePlantToDatabase(event)">
+        <div class="admin-form-group"><label>Plant Name</label><input type="text" id="new-plant-name" placeholder="e.g., Sunflower" required /></div>
+        <div class="admin-form-group"><label>Crop Icon / Emoji</label><input type="text" id="new-plant-icon" placeholder="e.g., 🌻 or 🌾" required /></div>
+        <div class="admin-form-group"><label>Upload Custom Image (Optional)</label><input type="file" id="new-plant-img-file" accept="image/*" /></div>
+        <div class="admin-form-group"><label>Optimal Temperature (°C)</label><input type="text" id="new-plant-temp" placeholder="e.g., 20 - 30 °C" required /></div>
+        <div class="admin-form-group"><label>Optimal Soil pH</label><input type="text" id="new-plant-ph" placeholder="e.g., 6.0 - 7.5" required /></div>
+        <div class="admin-form-group"><label>Optimal Soil Moisture (%)</label><input type="text" id="new-plant-moisture" placeholder="e.g., 50 - 70%" required /></div>
+        <div class="admin-form-group"><label>Crop Description</label><textarea id="new-plant-desc" rows="2" placeholder="Brief cultivation instructions..." required></textarea></div>
+        <button type="submit" class="btn-block btn-tertiary">Save Crop</button>
+      </form>
+
+      <hr class="divider" />
+
+      <h3 style="text-align: left; font-size: 14.5px; color: var(--moss); margin-bottom: 10px;">📄 Add Organic Farming PDF</h3>
+      <form id="add-pdf-form" onsubmit="savePdfToDatabase(event)">
+        <div class="admin-form-group"><label>PDF Title</label><input type="text" id="new-pdf-title" placeholder="e.g., Natural Pest Control Guide" required /></div>
+        <div class="admin-form-group"><label>File Details / Size</label><input type="text" id="new-pdf-details" placeholder="e.g., PDF Document • 2.5 MB" required /></div>
+        <div class="admin-form-group"><label>Upload PDF File (Select from PC)</label><input type="file" id="new-pdf-file" accept="application/pdf" /></div>
+        <div class="admin-form-group"><label>OR Paste Web PDF Link</label><input type="text" id="new-pdf-url" placeholder="e.g., https://example.com/guide.pdf" /></div>
+        <button type="submit" class="btn-block btn-secondary">Upload & Save PDF</button>
+      </form>
+
+      <hr class="divider" />
+
+      <button onclick="resetDefaultCrops()" class="btn-block btn-tertiary" style="margin-bottom: 15px;">
+        🔄 Reset to Clean Default Crops & Sample PDFs
+      </button>
+
+      <h3 style="text-align: left; font-size: 14.5px; color: var(--moss-deep);">Manage & Delete Existing Crops</h3>
+      <div id="admin-delete-list" class="admin-delete-list"></div>
+
+      <hr class="divider" />
+
+      <h3 style="text-align: left; font-size: 14.5px; color: var(--moss-deep);">Manage & Delete Existing PDFs</h3>
+      <div id="admin-pdf-delete-list" class="admin-delete-list"></div>
+    </div>
+  </div>
+
+  <script>
+    // 1. Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCIJaV5lZiBtFUArJBvwsyulBY0Zif2Cgk",
+      authDomain: "farmfriend-tech.firebaseapp.com",
+      databaseURL: "https://farmfriend-tech-default-rtdb.asia-southeast1.firebasedatabase.app/",
+      projectId: "farmfriend-tech",
+      storageBucket: "farmfriend-tech.appspot.com"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const samplePlants = [
+      { name: "Paddy / Rice", icon: "🌾", temp: "22 - 32 °C", ph: "5.5 - 6.5", moisture: "70 - 90%", desc: "Requires submerged or highly saturated soil moisture." },
+      { name: "Tomato", icon: "🍅", temp: "20 - 27 °C", ph: "6.0 - 6.8", moisture: "50 - 70%", desc: "Sensitive to waterlogging; needs well-drained soil." },
+      { name: "Maize / Corn", icon: "🌽", temp: "18 - 27 °C", ph: "5.8 - 7.0", moisture: "55 - 75%", desc: "Thrives in warm weather with moderate soil moisture." },
+      { name: "Cotton", icon: "☁️", temp: "21 - 30 °C", ph: "5.8 - 8.0", moisture: "40 - 60%", desc: "Requires hot climate and moderate watering during initial growth." },
+      { name: "Turmeric", icon: "🌿", temp: "20 - 35 °C", ph: "4.5 - 7.5", moisture: "60 - 80%", desc: "Requires loamy soil rich in organic matter." },
+      { name: "Sunflower", icon: "🌻", temp: "20 - 28 °C", ph: "6.0 - 7.5", moisture: "50 - 65%", desc: "Requires full sunlight and well-drained loamy soil." }
+    ];
+
+    const initialPdfs = [
+      { title: "Natural Soil Health & Composting", details: "PDF Guide • Public Resource", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
+      { title: "Bio-Pesticide Preparation Guide", details: "PDF Guide • Public Resource", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
+    ];
+
+    let loadedPlants = {};
+    let loadedPdfs = {};
+    let historyDataStore = [];
+    let isAdminAuthenticated = false;
+    let farmChart = null;
+    let currentFilter = '1day';
+
+    // ---- Optimum-range Alerts + Sprout AI state ----
+    let activeCropKey = '';
+    let dismissedAlertSignature = '';
+    let activeAlerts = []; // [{ metric, label, value, unit, range, message }]
+
+    // Auth Protection
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        document.getElementById('user-display').innerText = user.email || "Farmer";
+        initDashboard();
+      } else {
+        window.location.href = "login.html";
+      }
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      auth.signOut().then(() => window.location.href = "login.html");
+    });
+
+    // Tab Switcher
+    function switchTab(tabId, evt) {
+      document.querySelectorAll('.module-section').forEach(sec => sec.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+      document.getElementById(tabId).classList.add('active');
+      (evt ? evt.currentTarget : document.querySelector(`.tab-btn[onclick*="${tabId}"]`)).classList.add('active');
+    }
+
+    function initDashboard() {
+      listenToPlantDatabase();
+      listenToPdfDatabase();
+      initChart();
+      fetchHistoryData();
+      listenToActiveCrop();
+    }
+
+    // Modal Helpers
+    function openAdminAuthModal() {
+      document.getElementById('admin-auth-error').style.display = 'none';
+      document.getElementById('admin-user').value = '';
+      document.getElementById('admin-pass').value = '';
+      document.getElementById('admin-auth-modal').style.display = 'flex';
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+    }
+
+    // Verify Admin Credentials
+    // NOTE: this is a client-side gate for hiding/showing UI only — it is not real
+    // access control, since anyone can read this JS. The actual protection has to
+    // live in Firebase Realtime Database Security Rules (e.g. only allow writes to
+    // /plantcyclopedia and /organic_pdfs from an authenticated user with an
+    // "admin" custom claim). Keep this check, but don't rely on it for security.
+    function verifyAdminLogin() {
+      const user = document.getElementById('admin-user').value.trim();
+      const pass = document.getElementById('admin-pass').value.trim();
+
+      if (user === 'Farmfriend' && pass === 'asdfghjkl') {
+        isAdminAuthenticated = true;
+        closeModal('admin-auth-modal');
+        document.getElementById('admin-panel-modal').style.display = 'flex';
+        renderAdminDeleteList();
+        renderAdminPdfDeleteList();
+        renderPlantGrid(loadedPlants);
+        renderPdfList(loadedPdfs);
+      } else {
+        document.getElementById('admin-auth-error').style.display = 'block';
+      }
+    }
+
+    // Compress Image
+    function compressAndUploadImage(file, callback) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const img = new Image();
+        img.onload = function () {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 400;
+
+          if (width > height && width > maxDim) {
+            height *= maxDim / width;
+            width = maxDim;
+          } else if (height > maxDim) {
+            width *= maxDim / height;
+            height = maxDim;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+          callback(canvas.toDataURL('image/jpeg', 0.7));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Save New Plant
+    function savePlantToDatabase(e) {
+      e.preventDefault();
+
+      const name = document.getElementById('new-plant-name').value.trim();
+      const icon = document.getElementById('new-plant-icon').value.trim() || '🌱';
+      const temp = document.getElementById('new-plant-temp').value.trim();
+      const ph = document.getElementById('new-plant-ph').value.trim();
+      const moisture = document.getElementById('new-plant-moisture').value.trim();
+      const desc = document.getElementById('new-plant-desc').value.trim();
+      const fileInput = document.getElementById('new-plant-img-file');
+
+      const pushToDb = (imgData) => {
+        const newPlant = { name, icon, imgUrl: imgData || '', temp, ph, moisture, desc };
+        db.ref('/plantcyclopedia').push(newPlant).then(() => {
+          alert('New crop successfully added!');
+          document.getElementById('add-plant-form').reset();
+        });
+      };
+
+      if (fileInput.files && fileInput.files[0]) {
+        compressAndUploadImage(fileInput.files[0], pushToDb);
+      } else {
+        pushToDb('');
+      }
+    }
+
+    // Save New PDF
+    function savePdfToDatabase(e) {
+      e.preventDefault();
+
+      const title = document.getElementById('new-pdf-title').value.trim();
+      const details = document.getElementById('new-pdf-details').value.trim();
+      const urlInput = document.getElementById('new-pdf-url').value.trim();
+      const fileInput = document.getElementById('new-pdf-file');
+
+      const pushPdfToDb = (pdfDataUrl) => {
+        const newPdf = { title, details, url: pdfDataUrl || '#' };
+
+        db.ref('/organic_pdfs').push(newPdf).then(() => {
+          alert('New Organic Farming PDF successfully added!');
+          document.getElementById('add-pdf-form').reset();
+        }).catch((err) => {
+          alert('Error uploading PDF: ' + err.message);
+        });
+      };
+
+      if (fileInput.files && fileInput.files[0]) {
+        const file = fileInput.files[0];
+        if (file.size > 2 * 1024 * 1024) {
+          alert('PDF file size is larger than 2MB! Please select a smaller PDF or paste a web URL link.');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          pushPdfToDb(event.target.result);
+        };
+        reader.readAsDataURL(file);
+      } else if (urlInput) {
+        pushPdfToDb(urlInput);
+      } else {
+        alert("Please select a PDF file or paste a web link!");
+      }
+    }
+
+    // View PDF in Modal
+    function viewPdf(key) {
+      const pdf = loadedPdfs[key];
+      if (!pdf || !pdf.url || pdf.url === '#') {
+        alert('This PDF link is unavailable.');
+        return;
+      }
+
+      document.getElementById('pdf-viewer-title').innerText = pdf.title;
+      document.getElementById('pdf-frame').src = pdf.url;
+      document.getElementById('pdf-viewer-modal').style.display = 'flex';
+    }
+
+    // Reset Default Crops & PDFs
+    function resetDefaultCrops() {
+      if (confirm("Reset Plantcyclopedia & Organic PDFs to sample data?")) {
+        const plantsRef = db.ref('/plantcyclopedia');
+        const pdfsRef = db.ref('/organic_pdfs');
+
+        plantsRef.remove().then(() => samplePlants.forEach(p => plantsRef.push(p)));
+        pdfsRef.remove().then(() => initialPdfs.forEach(pdf => pdfsRef.push(pdf)));
+
+        alert("Database reset successfully!");
+      }
+    }
+
+    // Delete Functions
+    function deletePlant(key) {
+      if (confirm('Delete this crop from Plantcyclopedia?')) {
+        db.ref(`/plantcyclopedia/${key}`).remove();
+      }
+    }
+
+    function deletePdf(key) {
+      if (confirm('Delete this PDF guide from the library?')) {
+        db.ref(`/organic_pdfs/${key}`).remove();
+      }
+    }
+
+    // Database Listeners
+    function listenToPlantDatabase() {
+      const plantsRef = db.ref('/plantcyclopedia');
+      plantsRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        loadedPlants = data || {};
+        if (!data) samplePlants.forEach(plant => plantsRef.push(plant));
+        renderPlantGrid(loadedPlants);
+        if (isAdminAuthenticated) renderAdminDeleteList();
+        renderCropSelectOptions();
+        checkAlerts();
+      });
+    }
+
+    function listenToPdfDatabase() {
+      const pdfsRef = db.ref('/organic_pdfs');
+      pdfsRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        loadedPdfs = data || {};
+        if (!data) initialPdfs.forEach(pdf => pdfsRef.push(pdf));
+        renderPdfList(loadedPdfs);
+        if (isAdminAuthenticated) renderAdminPdfDeleteList();
+      });
+    }
+
+    // Render Plant Grid
+    function renderPlantGrid(plantsObj) {
+      const grid = document.getElementById('plant-grid');
+      grid.innerHTML = "";
+      const keys = Object.keys(plantsObj);
+
+      if (keys.length === 0) {
+        grid.innerHTML = "<p style='color: var(--muted); grid-column: 1/-1; text-align: center;'>No crops added yet.</p>";
+        return;
+      }
+
+      keys.forEach(key => {
+        const plant = plantsObj[key];
+        const icon = plant.icon || '🌱';
+
+        grid.innerHTML += `
+          <div class="plant-card" onclick="openPlantModal('${key}')">
+            ${isAdminAuthenticated ? `<button class="delete-card-btn" style="display: flex;" onclick="event.stopPropagation(); deletePlant('${key}')">&times;</button>` : ''}
+            <div class="plant-img-container">
+              ${plant.imgUrl
+            ? `<img class="plant-img" src="${plant.imgUrl}" alt="${plant.name}" />`
+            : `<span class="plant-card-icon">${icon}</span>`
+          }
+            </div>
+            <div class="plant-card-body">
+              <h3>${plant.name}</h3>
+              <p style="font-size: 12px;">Optimal pH: ${plant.ph}</p>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // Render PDF List
+    function renderPdfList(pdfsObj) {
+      const list = document.getElementById('pdf-list');
+      list.innerHTML = "";
+      const keys = Object.keys(pdfsObj);
+
+      keys.forEach(key => {
+        const pdf = pdfsObj[key];
+        list.innerHTML += `
+          <div class="pdf-item">
+            <div class="pdf-info">
+              <i class="fa-solid fa-file-pdf pdf-clipart"></i>
+              <div>
+                <strong>${pdf.title}</strong>
+                <p>${pdf.details}</p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <button onclick="viewPdf('${key}')" class="btn-view">View PDF</button>
+              ${isAdminAuthenticated ? `<button class="btn-delete-item" onclick="deletePdf('${key}')">Delete</button>` : ''}
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function renderAdminDeleteList() {
+      const deleteList = document.getElementById('admin-delete-list');
+      deleteList.innerHTML = "";
+      Object.keys(loadedPlants).forEach(key => {
+        const plant = loadedPlants[key];
+        deleteList.innerHTML += `
+          <div class="admin-delete-item">
+            <span>${plant.icon || '🌱'} <strong>${plant.name}</strong></span>
+            <button class="btn-delete-item" onclick="deletePlant('${key}')">Delete</button>
+          </div>
+        `;
+      });
+    }
+
+    function renderAdminPdfDeleteList() {
+      const deleteList = document.getElementById('admin-pdf-delete-list');
+      deleteList.innerHTML = "";
+      Object.keys(loadedPdfs).forEach(key => {
+        const pdf = loadedPdfs[key];
+        deleteList.innerHTML += `
+          <div class="admin-delete-item">
+            <span>📄 <strong>${pdf.title}</strong></span>
+            <button class="btn-delete-item" onclick="deletePdf('${key}')">Delete</button>
+          </div>
+        `;
+      });
+    }
+
+    function openPlantModal(key) {
+      const plant = loadedPlants[key];
+      if (!plant) return;
+
+      const bannerContainer = document.getElementById('modal-banner');
+      if (plant.imgUrl) {
+        bannerContainer.innerHTML = `<img class="modal-banner-img" src="${plant.imgUrl}" alt="${plant.name}" />`;
+      } else {
+        bannerContainer.innerHTML = `<span class="modal-banner-icon">${plant.icon || '🌱'}</span>`;
+      }
+
+      document.getElementById('modal-title').innerText = plant.name;
+      document.getElementById('modal-desc').innerText = plant.desc;
+      document.getElementById('modal-temp').innerText = plant.temp;
+      document.getElementById('modal-ph').innerText = plant.ph;
+      document.getElementById('modal-moisture').innerText = plant.moisture;
+      document.getElementById('plant-modal').style.display = 'flex';
+    }
+
+    // Initialize Chart.js
+    function initChart() {
+      const ctx = document.getElementById('farmVoiceChart').getContext('2d');
+      farmChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'Soil Moisture (%)',
+              data: [],
+              borderColor: '#2a9d8f',
+              backgroundColor: 'rgba(42, 157, 143, 0.12)',
+              fill: true,
+              tension: 0.35,
+              pointRadius: 2,
+              yAxisID: 'y'
+            },
+            {
+              label: 'Soil pH',
+              data: [],
+              borderColor: '#e07a3f',
+              backgroundColor: 'rgba(224, 122, 63, 0.1)',
+              fill: false,
+              tension: 0.35,
+              pointRadius: 2,
+              yAxisID: 'y1'
+            },
+            {
+              label: 'Temperature (°C)',
+              data: [],
+              borderColor: '#c9663f',
+              backgroundColor: 'rgba(201, 102, 63, 0.1)',
+              fill: false,
+              tension: 0.35,
+              pointRadius: 2,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'top', labels: { font: { family: 'Manrope' }, usePointStyle: true } },
+            tooltip: { backgroundColor: '#2f5744', titleFont: { family: 'Manrope' }, bodyFont: { family: 'Manrope' } }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 11 } } },
+            y: {
+              beginAtZero: false,
+              position: 'left',
+              title: { display: true, text: 'Soil Moisture (%)', font: { family: 'Manrope', size: 11 } },
+              grid: { color: 'rgba(74,122,99,0.08)' }
+            },
+            y1: {
+              beginAtZero: false,
+              position: 'right',
+              title: { display: true, text: 'pH  /  °C', font: { family: 'Manrope', size: 11 } },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    // Real-Time ESP32 Listener directly reading keys: humidity, phValue, soilPercent, temperature
+    // Pulls a larger window so the 1-week / 1-month / 1-year filters have real
+    // historical spread to aggregate over, instead of just re-slicing the same
+    // handful of latest records.
+    function fetchHistoryData() {
+      const historyRef = db.ref('/sensor_data/history').limitToLast(1000);
+      const timeline = document.getElementById('history-timeline');
+
+      historyRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        historyDataStore = [];
+        timeline.innerHTML = "";
+
+        if (data) {
+          const items = [];
+          Object.keys(data).forEach(key => {
+            items.push(data[key]);
+          });
+          historyDataStore = items;
+
+          // Render live item log (most recent 30 entries, newest first)
+          const recent = items.slice(-30).reverse();
+          timeline.innerHTML = recent.map(item => `
+            <div class="history-item">
+              <span>🌡️ Temp: ${item.temperature ? item.temperature.toFixed(1) : '--'}°C | 💧 Hum: ${item.humidity ? item.humidity.toFixed(1) : '--'}%</span>
+              <span>🌾 Soil: ${item.soilPercent ? item.soilPercent.toFixed(1) : '--'}% | 🧪 pH: ${item.phValue ? item.phValue.toFixed(2) : '--'}</span>
+            </div>
+          `).join('');
+
+          updateChartGraph(currentFilter);
+        } else {
+          timeline.innerHTML = "<p style='color: var(--muted);'>No records logged yet. Make sure ESP32 is running.</p>";
+          renderStatChips([]);
+        }
+
+        checkAlerts();
+      });
+    }
+
+    // Returns the most recent sensor reading object, or null if none logged yet.
+    function getLatestReading() {
+      if (!historyDataStore.length) return null;
+      return historyDataStore[historyDataStore.length - 1];
+    }
+
+    // Parses stored optimum-range strings like "22 - 32 °C", "5.5 - 6.5", "70 - 90%"
+    // into { min, max } numbers. Returns null if the string can't be parsed.
+    function parseRange(str) {
+      if (!str) return null;
+      const matches = String(str).match(/-?\d+(\.\d+)?/g);
+      if (!matches || matches.length < 2) return null;
+      return { min: parseFloat(matches[0]), max: parseFloat(matches[1]) };
+    }
+
+    // Groups raw readings into time buckets appropriate to the selected range,
+    // averaging each metric per bucket so the chart shows a real trend instead
+    // of just the last N raw points relabeled.
+    function bucketHistory(filter) {
+      const now = Date.now();
+      let rangeMs, bucketMs, labelFn;
+
+      if (filter === '1day') {
+        rangeMs = 24 * 60 * 60 * 1000;
+        bucketMs = 60 * 60 * 1000; // hourly buckets
+        labelFn = (t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } else if (filter === '1week') {
+        rangeMs = 7 * 24 * 60 * 60 * 1000;
+        bucketMs = 24 * 60 * 60 * 1000; // daily buckets
+        labelFn = (t) => new Date(t).toLocaleDateString([], { weekday: 'short' });
+      } else if (filter === '1month') {
+        rangeMs = 30 * 24 * 60 * 60 * 1000;
+        bucketMs = 24 * 60 * 60 * 1000; // daily buckets
+        labelFn = (t) => new Date(t).toLocaleDateString([], { month: 'short', day: 'numeric' });
+      } else {
+        rangeMs = 365 * 24 * 60 * 60 * 1000;
+        bucketMs = 30 * 24 * 60 * 60 * 1000; // ~monthly buckets
+        labelFn = (t) => new Date(t).toLocaleDateString([], { month: 'short', year: '2-digit' });
+      }
+
+      const cutoff = now - rangeMs;
+      const withTime = historyDataStore.filter(item => item.timestamp);
+      const inRange = withTime.length > 0
+        ? withTime.filter(item => item.timestamp >= cutoff)
+        : [];
+
+      // Fallback: if entries have no timestamp field, just use the most recent
+      // raw readings so the chart still renders something meaningful for 1 day.
+      if (withTime.length === 0) {
+        const fallback = historyDataStore.slice(-12);
+        return {
+          labels: fallback.map((_, i) => `#${i + 1}`),
+          moisture: fallback.map(i => i.soilPercent || 0),
+          ph: fallback.map(i => i.phValue || 0),
+          temp: fallback.map(i => i.temperature || 0),
+          raw: fallback
+        };
+      }
+
+      const source = inRange.length > 0 ? inRange : withTime.slice(-20);
+
+      const buckets = {};
+      source.forEach(item => {
+        const bucketKey = Math.floor(item.timestamp / bucketMs);
+        if (!buckets[bucketKey]) buckets[bucketKey] = [];
+        buckets[bucketKey].push(item);
+      });
+
+      const sortedKeys = Object.keys(buckets).map(Number).sort((a, b) => a - b);
+      const avg = (arr, field) => {
+        const vals = arr.map(i => i[field]).filter(v => typeof v === 'number');
+        return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+      };
+
+      return {
+        labels: sortedKeys.map(k => labelFn(k * bucketMs)),
+        moisture: sortedKeys.map(k => avg(buckets[k], 'soilPercent')),
+        ph: sortedKeys.map(k => avg(buckets[k], 'phValue')),
+        temp: sortedKeys.map(k => avg(buckets[k], 'temperature')),
+        raw: source
+      };
+    }
+
+    function renderStatChips(raw) {
+      const row = document.getElementById('stat-row');
+      if (!raw || raw.length === 0) {
+        row.innerHTML = '';
+        return;
+      }
+      const stats = (field, unit, decimals) => {
+        const vals = raw.map(i => i[field]).filter(v => typeof v === 'number');
+        if (!vals.length) return { min: '--', avg: '--', max: '--' };
+        const min = Math.min(...vals).toFixed(decimals);
+        const max = Math.max(...vals).toFixed(decimals);
+        const avg = (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(decimals);
+        return { min, avg, max, unit };
+      };
+
+      const moisture = stats('soilPercent', '%', 1);
+      const ph = stats('phValue', '', 2);
+      const temp = stats('temperature', '°C', 1);
+
+      row.innerHTML = `
+        <div class="stat-chip">
+          <div class="stat-label">Soil Moisture</div>
+          <div class="stat-value">${moisture.avg}${moisture.unit}</div>
+          <div class="stat-sub">range ${moisture.min}–${moisture.max}${moisture.unit}</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-label">Soil pH</div>
+          <div class="stat-value">${ph.avg}</div>
+          <div class="stat-sub">range ${ph.min}–${ph.max}</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-label">Temperature</div>
+          <div class="stat-value">${temp.avg}${temp.unit}</div>
+          <div class="stat-sub">range ${temp.min}–${temp.max}${temp.unit}</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-label">Readings</div>
+          <div class="stat-value">${raw.length}</div>
+          <div class="stat-sub">in selected range</div>
+        </div>
+      `;
+    }
+
+    // Chart Update Function
+    function updateChartGraph(filter) {
+      if (!farmChart || historyDataStore.length === 0) return;
+      currentFilter = filter;
+
+      const bucketed = bucketHistory(filter);
+
+      farmChart.data.labels = bucketed.labels;
+      farmChart.data.datasets[0].data = bucketed.moisture;
+      farmChart.data.datasets[1].data = bucketed.ph;
+      farmChart.data.datasets[2].data = bucketed.temp;
+      farmChart.update();
+
+      renderStatChips(bucketed.raw);
+    }
+
+    function updateTimeFilter(filter, btn) {
+      document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      updateChartGraph(filter);
+    }
+
+    // ================= OPTIMUM-VALUE ALERTS =================
+
+    // Which crop the farmer says they're currently growing, synced via Firebase
+    // (/settings/activeCropKey) so it's remembered across sessions/devices.
+    function listenToActiveCrop() {
+      db.ref('/settings/activeCropKey').on('value', (snapshot) => {
+        activeCropKey = snapshot.val() || '';
+        const select = document.getElementById('sprout-crop-select');
+        if (select) select.value = activeCropKey;
+        checkAlerts();
+        renderSproutInsights();
+      });
+    }
+
+    function onActiveCropChange(key) {
+      db.ref('/settings/activeCropKey').set(key || null);
+    }
+
+    function renderCropSelectOptions() {
+      const select = document.getElementById('sprout-crop-select');
+      if (!select) return;
+      const keys = Object.keys(loadedPlants);
+      select.innerHTML = '<option value="">Select a crop to get live insights & alerts...</option>' +
+        keys.map(key => {
+          const p = loadedPlants[key];
+          return `<option value="${key}">${p.icon || '🌱'} ${p.name}</option>`;
+        }).join('');
+      select.value = activeCropKey;
+    }
+
+    // Compares the latest sensor reading against the active crop's optimum
+    // ranges (temp / moisture / pH) and renders dismissible banners + the
+    // Sprout AI tab badge for anything currently out of range.
+    function checkAlerts() {
+      const banner = document.getElementById('alert-stack');
+      const badge = document.getElementById('sprout-alert-badge');
+      if (!banner || !badge) return;
+
+      const reading = getLatestReading();
+      const plant = activeCropKey ? loadedPlants[activeCropKey] : null;
+
+      activeAlerts = [];
+
+      if (reading && plant) {
+        const checks = [
+          { field: 'temperature', rangeStr: plant.temp, label: 'Temperature', icon: '🌡️', unit: '°C', decimals: 1 },
+          { field: 'soilPercent', rangeStr: plant.moisture, label: 'Soil Moisture', icon: '💧', unit: '%', decimals: 1 },
+          { field: 'phValue', rangeStr: plant.ph, label: 'Soil pH', icon: '🧪', unit: '', decimals: 2 }
+        ];
+
+        checks.forEach(c => {
+          const value = reading[c.field];
+          const range = parseRange(c.rangeStr);
+          if (typeof value !== 'number' || !range) return;
+
+          if (value < range.min || value > range.max) {
+            const direction = value < range.min ? 'below' : 'above';
+            activeAlerts.push({
+              metric: c.field,
+              icon: c.icon,
+              message: `${c.label} ${value.toFixed(c.decimals)}${c.unit} is ${direction} the optimum ${c.rangeStr} for ${plant.name}`
+            });
+          }
+        });
+      }
+
+      // Badge / counter
+      if (activeAlerts.length > 0) {
+        badge.innerText = activeAlerts.length;
+        badge.classList.add('show');
+      } else {
+        badge.classList.remove('show');
+      }
+
+      // Banner(s) — a fresh combination of alerts clears any previous dismissal
+      const signature = activeAlerts.map(a => a.message).join('|');
+      if (signature && signature === dismissedAlertSignature) {
+        banner.innerHTML = '';
+        return;
+      }
+
+      if (activeAlerts.length === 0) {
+        banner.innerHTML = '';
+        return;
+      }
+
+      banner.innerHTML = activeAlerts.map((a, i) => `
+        <div class="alert-banner">
+          <span class="alert-icon">${a.icon}</span>
+          <span class="alert-text">${a.message}</span>
+          <button class="alert-close" onclick="dismissAlerts()">&times;</button>
+        </div>
+      `).join('');
+
+      renderSproutInsights();
+    }
+
+    function dismissAlerts() {
+      dismissedAlertSignature = activeAlerts.map(a => a.message).join('|');
+      document.getElementById('alert-stack').innerHTML = '';
+    }
+
+    // ================= SPROUT AI =================
+
+    // Auto-generated insight cards comparing the latest live reading to the
+    // active crop's optimum ranges.
+    function renderSproutInsights() {
+      const container = document.getElementById('sprout-insights');
+      if (!container) return;
+
+      const reading = getLatestReading();
+      const plant = activeCropKey ? loadedPlants[activeCropKey] : null;
+
+      if (!reading) {
+        container.innerHTML = `<p style="color: var(--muted); grid-column: 1/-1;">No live sensor readings yet — make sure your ESP32 is online.</p>`;
+        return;
+      }
+      if (!plant) {
+        container.innerHTML = `<p style="color: var(--muted); grid-column: 1/-1;">Select a crop above to see personalized insights against live readings.</p>`;
+        return;
+      }
+
+      const checks = [
+        { field: 'temperature', rangeStr: plant.temp, label: 'Temperature', unit: '°C', decimals: 1 },
+        { field: 'soilPercent', rangeStr: plant.moisture, label: 'Soil Moisture', unit: '%', decimals: 1 },
+        { field: 'phValue', rangeStr: plant.ph, label: 'Soil pH', unit: '', decimals: 2 }
+      ];
+
+      container.innerHTML = checks.map(c => {
+        const value = reading[c.field];
+        const range = parseRange(c.rangeStr);
+        const hasValue = typeof value === 'number';
+        let status = 'ok';
+        let tip = `Within the optimum ${c.rangeStr} range for ${plant.name}. Keep it up!`;
+
+        if (hasValue && range) {
+          if (value < range.min) {
+            status = 'warn';
+            tip = c.field === 'soilPercent'
+              ? `Below optimum — consider irrigating soon.`
+              : c.field === 'temperature'
+                ? `Below optimum — consider shading or waiting for warmer conditions.`
+                : `Below optimum pH — consider adding lime or an alkaline amendment.`;
+          } else if (value > range.max) {
+            status = 'warn';
+            tip = c.field === 'soilPercent'
+              ? `Above optimum — hold off on watering and check drainage.`
+              : c.field === 'temperature'
+                ? `Above optimum — consider shading during peak heat.`
+                : `Above optimum pH — consider an acidifying amendment like sulfur.`;
+          }
+        } else if (!hasValue) {
+          tip = 'No recent reading for this metric.';
+        }
+
+        return `
+          <div class="insight-card ${status}">
+            <div class="insight-label">${c.label}</div>
+            <div class="insight-value">${hasValue ? value.toFixed(c.decimals) + c.unit : '--'}</div>
+            <div class="insight-tip">${tip}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Lightweight rule-based assistant — runs entirely client-side (no backend/API
+    // key needed) using the live sensor readings + selected crop's optimum data.
+    function appendChatMsg(text, who) {
+      const log = document.getElementById('sprout-chat-log');
+      const div = document.createElement('div');
+      div.className = `chat-msg ${who}`;
+      div.innerText = text;
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+      return div;
+    }
+
+    // Builds a plain-text summary of the live farm state (active crop, latest
+    // sensor reading, and any out-of-range alerts) to ground the AI's answer.
+    function buildFarmContext() {
+      const reading = getLatestReading();
+      const plant = activeCropKey ? loadedPlants[activeCropKey] : null;
+      const lines = [];
+
+      lines.push(plant
+        ? `Active crop: ${plant.name}. Optimum ranges — Temp: ${plant.temp}, Soil moisture: ${plant.moisture}, pH: ${plant.ph}.`
+        : 'No crop currently selected by the farmer.');
+
+      lines.push(reading
+        ? `Latest live sensor reading — Temp: ${typeof reading.temperature === 'number' ? reading.temperature.toFixed(1) + '°C' : 'n/a'}, ` +
+          `Soil moisture: ${typeof reading.soilPercent === 'number' ? reading.soilPercent.toFixed(1) + '%' : 'n/a'}, ` +
+          `pH: ${typeof reading.phValue === 'number' ? reading.phValue.toFixed(2) : 'n/a'}, ` +
+          `Humidity: ${typeof reading.humidity === 'number' ? reading.humidity.toFixed(1) + '%' : 'n/a'}.`
+        : 'No live sensor readings available yet — the ESP32 may be offline.');
+
+      lines.push(activeAlerts.length
+        ? `Current out-of-range alerts: ${activeAlerts.map(a => a.message).join('; ')}.`
+        : 'No active alerts — all monitored readings are currently within range.');
+
+      return lines.join('\n');
+    }
+
+    // Pulls the Organic Farming Library (Firebase /organic_pdfs) into (a) a plain
+    // list of titles/details for context, and (b) actual PDF document blocks for
+    // guides that were uploaded as files (data: URLs), so the model can read them
+    // directly instead of just seeing a title. Pasted external links can't be
+    // attached as file content (no server-side fetch here), so those stay as
+    // text-only references. Capped at 4 attached PDFs to keep the request light.
+    function buildLibraryContext() {
+      const keys = Object.keys(loadedPdfs);
+      const textLines = [];
+      const docs = [];
+
+      keys.forEach((key) => {
+        const pdf = loadedPdfs[key];
+        textLines.push(`- "${pdf.title}" (${pdf.details || 'Organic farming guide'})`);
+
+        if (docs.length < 4 && pdf.url && pdf.url.startsWith('data:application/pdf;base64,')) {
+          docs.push({
+            type: 'document',
+            source: { type: 'base64', media_type: 'application/pdf', data: pdf.url.split(',')[1] },
+            title: pdf.title
+          });
+        }
+      });
+
+      return {
+        text: textLines.length ? textLines.join('\n') : 'No guides currently in the library.',
+        docs
+      };
+    }
+
+    // Calls Claude to analyze the live farm data against the Organic Farming
+    // Library and answer the farmer's question with grounded recommendations.
+    async function askSproutAI(question) {
+      const farmContext = buildFarmContext();
+      const library = buildLibraryContext();
+
+      const systemPrompt = `You are Sprout, a friendly, knowledgeable AI farming assistant built into the FarmFriend smart agriculture app. You help the farmer by analyzing their live ESP32 sensor readings against the app's Organic Farming Library (PDF guides on sustainable, chemical-free agriculture).
+
+Farm context:
+${farmContext}
+
+Organic Farming Library available:
+${library.text}
+
+Instructions:
+- Ground your recommendations in the attached PDF guides whenever they're relevant — refer to them by title when you use them (e.g. "Per the 'Bio-Pesticide Preparation Guide'...").
+- If no attached guide covers the question, you may draw on general organic-farming knowledge, but make clear you're not quoting a specific guide.
+- Always favor organic, chemical-free recommendations, consistent with the app's focus.
+- If a sensor reading is out of range, proactively connect your advice to it.
+- Be concise, warm, and practical — this is a chat bubble on a phone. 3-5 sentences unless the farmer asks for a full plan.`;
+
+      const messageContent = [{ type: 'text', text: question }, ...library.docs];
+
+      // Calls our own Netlify Function (netlify/functions/sprout-ai.js) rather
+      // than api.anthropic.com directly, so the API key stays server-side.
+      const response = await fetch('/.netlify/functions/sprout-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system: systemPrompt,
+          messages: [{ role: 'user', content: messageContent }]
+        })
+      });
+
+      if (!response.ok) throw new Error(`Sprout AI request failed (${response.status})`);
+
+      const data = await response.json();
+      const text = (data.content || [])
+        .filter(block => block.type === 'text')
+        .map(block => block.text)
+        .join('\n')
+        .trim();
+
+      return text || "I looked into it but couldn't put together an answer — try rephrasing your question.";
+    }
+
+    function sendSproutMessage(preset) {
+      const input = document.getElementById('sprout-chat-input');
+      const text = (preset || input.value).trim();
+      if (!text) return;
+
+      appendChatMsg(text, 'user');
+      if (!preset) input.value = '';
+
+      const thinkingEl = appendChatMsg('Sprout is analyzing your farm data…', 'bot');
+      thinkingEl.classList.add('typing');
+
+      askSproutAI(text)
+        .then((reply) => {
+          thinkingEl.classList.remove('typing');
+          thinkingEl.innerText = reply;
+        })
+        .catch((err) => {
+          console.error('Sprout AI error:', err);
+          thinkingEl.classList.remove('typing');
+          thinkingEl.classList.add('error');
+          thinkingEl.innerText = "Hmm, I couldn't reach the AI just now. Please try again in a moment.";
+        });
+    }
+  </script>
+</body>
+
+</html>
