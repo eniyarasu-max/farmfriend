@@ -238,6 +238,12 @@
       opacity: 0.7; font-family: 'Manrope', sans-serif;
     }
     .alert-banner .alert-close:hover { opacity: 1; }
+    .alert-banner.anomaly {
+      background: rgba(127, 176, 201, 0.16);
+      border: 1px solid rgba(127, 176, 201, 0.4);
+      color: #2f5b6f;
+    }
+    .alert-banner.anomaly .alert-close { color: #2f5b6f; }
 
     /* ---- Container ---- */
     .container {
@@ -822,6 +828,7 @@
             <span class="chip-suggestion" data-i18n="sprout.chip2" onclick="sendSproutMessage('What is the soil moisture?')">Soil moisture?</span>
             <span class="chip-suggestion" data-i18n="sprout.chip3" onclick="sendSproutMessage('Any alerts right now?')">Any alerts?</span>
             <span class="chip-suggestion" data-i18n="sprout.chip4" onclick="sendSproutMessage('Tips to improve my soil')">Tips to improve soil</span>
+            <span class="chip-suggestion" data-i18n="sprout.chip5" onclick="sendSproutMessage('Any unusual trends lately?')">Any unusual trends?</span>
           </div>
           <div class="sprout-chat-log" id="sprout-chat-log">
             <div class="chat-msg bot" id="sprout-greeting-msg" data-i18n="sprout.greeting">Hi, I'm Sprout 🪱 Pick your crop above and ask me anything about your live soil readings!</div>
@@ -972,6 +979,7 @@
         'sprout.chip2': 'Soil moisture?',
         'sprout.chip3': 'Any alerts right now?',
         'sprout.chip4': 'Tips to improve soil',
+        'sprout.chip5': 'Any unusual trends?',
         'sprout.greeting': "Hi, I'm Sprout 🪱 Pick your crop above and ask me anything about your live soil readings!",
         'sprout.chatPlaceholder': 'Ask about temperature, moisture, pH...'
       },
@@ -1004,6 +1012,7 @@
         'sprout.chip2': 'மண் ஈரப்பதம்?',
         'sprout.chip3': 'இப்போது ஏதேனும் எச்சரிக்கை உள்ளதா?',
         'sprout.chip4': 'மண்ணை மேம்படுத்த குறிப்புகள்',
+        'sprout.chip5': 'சமீபத்தில் ஏதேனும் மாற்றங்கள்?',
         'sprout.greeting': 'வணக்கம், நான் ஸ்ப்ரவுட் 🪱 மேலே உங்கள் பயிரைத் தேர்ந்தெடுத்து, உங்கள் நேரடி மண் அளவீடுகள் பற்றி என்னிடம் கேளுங்கள்!',
         'sprout.chatPlaceholder': 'வெப்பநிலை, ஈரப்பதம், pH பற்றி கேளுங்கள்...'
       }
@@ -1105,6 +1114,7 @@
     let activeCropKey = '';
     let dismissedAlertSignature = '';
     let activeAlerts = []; // [{ metric, label, value, unit, range, message }]
+    let activeAnomalies = []; // [{ metric, icon, message }] — trend/rate-of-change anomalies
 
     // Auth Protection
     auth.onAuthStateChanged((user) => {
@@ -1936,6 +1946,93 @@
       select.value = activeCropKey;
     }
 
+    // ---- Trend / rate-of-change anomaly detection --------------------------
+    // Goes beyond static "is it in range" alerts: flags when a metric is
+    // moving noticeably faster than its own recent history suggests is
+    // normal — e.g. "soil moisture has dropped 15% faster than usual in the
+    // last 3 hours." A drying trend can be worth flagging well before the
+    // reading actually crosses the crop's threshold.
+    //
+    // Method (deliberately simple/explainable, no external stats library):
+    // 1. Take the last RECENT_WINDOW_MS of readings for a metric and compute
+    //    its net rate of change (value/hour) via first-vs-last point.
+    // 2. Take a longer BASELINE_WINDOW_MS of prior history and compute that
+    //    same rate over many overlapping windows of matching length, then
+    //    average their magnitudes — this is the metric's "usual pace."
+    // 3. If the recent rate's magnitude is at least ANOMALY_RATIO times the
+    //    baseline pace (and not just tiny sensor noise), flag it, reporting
+    //    both the raw change and how many times faster than usual it is.
+    const TREND_METRICS = [
+      { field: 'soilPercent', label: 'Soil moisture', unit: '%', icon: '📉', minMove: 1.5 },
+      { field: 'temperature', label: 'Temperature', unit: '°C', icon: '🌡️', minMove: 1.0 },
+      { field: 'humidity', label: 'Humidity', unit: '%', icon: '💧', minMove: 2.0 }
+    ];
+    const RECENT_WINDOW_MS = 3 * 60 * 60 * 1000;    // "last 3 hours"
+    const BASELINE_WINDOW_MS = 3 * 24 * 60 * 60 * 1000; // prior 3 days as the "usual" baseline
+    const ANOMALY_RATIO = 1.8; // recent pace must be ≥1.8x the historical average pace
+
+    function computeTrendAnomalies() {
+      const now = Date.now();
+      const withTime = historyDataStore.filter(i => typeof i.timestamp === 'number');
+      if (withTime.length < 6) return []; // not enough history to trust a trend yet
+
+      const sorted = [...withTime].sort((a, b) => a.timestamp - b.timestamp);
+      const anomalies = [];
+
+      TREND_METRICS.forEach((m) => {
+        const recentPts = sorted.filter(p => now - p.timestamp <= RECENT_WINDOW_MS && typeof p[m.field] === 'number');
+        if (recentPts.length < 2) return;
+
+        const first = recentPts[0];
+        const last = recentPts[recentPts.length - 1];
+        const hoursSpan = (last.timestamp - first.timestamp) / 3600000;
+        if (hoursSpan < 0.5) return; // too short a span to trust a rate
+
+        const recentRate = (last[m.field] - first[m.field]) / hoursSpan; // signed, per hour
+        const netChange = last[m.field] - first[m.field];
+
+        // Baseline: prior history, excluding the recent window itself.
+        const baselinePts = sorted.filter(p =>
+          now - p.timestamp > RECENT_WINDOW_MS &&
+          now - p.timestamp <= BASELINE_WINDOW_MS &&
+          typeof p[m.field] === 'number'
+        );
+        if (baselinePts.length < 6) return; // not enough baseline history yet
+
+        // Sample overlapping windows of the same length as the recent span
+        // across the baseline period to get a distribution of "normal" rates.
+        const rates = [];
+        for (let i = 0; i < baselinePts.length; i++) {
+          const winStart = baselinePts[i].timestamp;
+          const winEnd = winStart + hoursSpan * 3600000;
+          const winPts = baselinePts.filter(p => p.timestamp >= winStart && p.timestamp <= winEnd);
+          if (winPts.length < 2) continue;
+          const w0 = winPts[0], w1 = winPts[winPts.length - 1];
+          const span = (w1.timestamp - w0.timestamp) / 3600000;
+          if (span < hoursSpan * 0.5) continue;
+          rates.push((w1[m.field] - w0[m.field]) / span);
+        }
+        if (rates.length < 3) return; // not enough sampled windows to be confident
+
+        const avgAbsBaselineRate = rates.reduce((a, b) => a + Math.abs(b), 0) / rates.length;
+        const baselineFloor = Math.max(avgAbsBaselineRate, 0.05); // avoid divide-by-near-zero on flat history
+        const recentAbsRate = Math.abs(recentRate);
+        const ratio = recentAbsRate / baselineFloor;
+
+        if (ratio >= ANOMALY_RATIO && Math.abs(netChange) >= m.minMove) {
+          const dirWord = netChange < 0 ? 'dropped' : 'risen';
+          const hoursLabel = hoursSpan >= 1.5 ? `${hoursSpan.toFixed(1)} hours` : `${Math.round(hoursSpan * 60)} min`;
+          anomalies.push({
+            metric: m.field,
+            icon: m.icon,
+            message: `${m.label} has ${dirWord} ${Math.abs(netChange).toFixed(1)}${m.unit} in the last ${hoursLabel} — about ${ratio.toFixed(1)}x faster than its usual pace.`
+          });
+        }
+      });
+
+      return anomalies;
+    }
+
     // Compares the latest sensor reading against the active crop's optimum
     // ranges (temp / moisture / pH) and renders dismissible banners + the
     // Sprout AI tab badge for anything currently out of range.
@@ -1972,28 +2069,39 @@
         });
       }
 
+      // Trend/anomaly detection runs independent of whether a crop is
+      // selected — it's about the sensor's own recent history, not optimum
+      // ranges, so it can flag a fast-drying soil trend even before a
+      // threshold is crossed (or with no crop picked at all).
+      activeAnomalies = computeTrendAnomalies();
+
+      const combined = [
+        ...activeAlerts.map(a => ({ ...a, type: 'threshold' })),
+        ...activeAnomalies.map(a => ({ ...a, type: 'anomaly' }))
+      ];
+
       // Badge / counter
-      if (activeAlerts.length > 0) {
-        badge.innerText = activeAlerts.length;
+      if (combined.length > 0) {
+        badge.innerText = combined.length;
         badge.classList.add('show');
       } else {
         badge.classList.remove('show');
       }
 
       // Banner(s) — a fresh combination of alerts clears any previous dismissal
-      const signature = activeAlerts.map(a => a.message).join('|');
+      const signature = combined.map(a => a.message).join('|');
       if (signature && signature === dismissedAlertSignature) {
         banner.innerHTML = '';
         return;
       }
 
-      if (activeAlerts.length === 0) {
+      if (combined.length === 0) {
         banner.innerHTML = '';
         return;
       }
 
-      banner.innerHTML = activeAlerts.map((a, i) => `
-        <div class="alert-banner">
+      banner.innerHTML = combined.map((a) => `
+        <div class="alert-banner${a.type === 'anomaly' ? ' anomaly' : ''}">
           <span class="alert-icon">${a.icon}</span>
           <span class="alert-text">${a.message}</span>
           <button class="alert-close" onclick="dismissAlerts()">&times;</button>
@@ -2004,7 +2112,8 @@
     }
 
     function dismissAlerts() {
-      dismissedAlertSignature = activeAlerts.map(a => a.message).join('|');
+      const combined = [...activeAlerts, ...activeAnomalies];
+      dismissedAlertSignature = combined.map(a => a.message).join('|');
       document.getElementById('alert-stack').innerHTML = '';
     }
 
@@ -2210,7 +2319,11 @@
 
       lines.push(activeAlerts.length
         ? `Current out-of-range alerts: ${activeAlerts.map(a => a.message).join('; ')}.`
-        : 'No active alerts — all monitored readings are currently within range.');
+        : 'No active threshold alerts — all monitored readings are currently within range.');
+
+      lines.push(activeAnomalies.length
+        ? `Trend/rate-of-change anomalies (moving unusually fast vs their own recent history, independent of whether they're in range): ${activeAnomalies.map(a => a.message).join('; ')}.`
+        : 'No unusual rate-of-change trends detected right now.');
 
       return lines.join('\n');
     }
@@ -2276,6 +2389,7 @@ Instructions:
 - If no excerpt covers the question, you may draw on general organic-farming knowledge, but make clear you're not quoting a specific guide.
 - Always favor organic, chemical-free recommendations, consistent with the app's focus.
 - If a sensor reading is out of range, proactively connect your advice to it.
+- If there's a trend/rate-of-change anomaly (a metric moving unusually fast vs its own recent history), proactively mention it and suggest a likely cause and next step — this can matter even if the reading is still technically within range.
 - Be concise, warm, and practical — this is a chat bubble on a phone. 3-5 sentences unless the farmer asks for a full plan.${currentLang === 'ta' ? '\n- The farmer has switched the app to Tamil. Reply ENTIRELY in Tamil (தமிழ்), using simple, everyday words a farmer would use. You may keep technical units (°C, %, pH, mg/kg) and crop names in Latin script if there is no common Tamil term.' : ''}`;
 
       // Calls our own Netlify Function (netlify/functions/sprout-ai.js) rather
