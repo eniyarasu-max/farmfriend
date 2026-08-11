@@ -2218,20 +2218,109 @@
       if (!speakerOutputOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
     }
 
+    // ---- Voice list loading ----
+    // getVoices() frequently returns [] the first time it's called — the
+    // browser loads its voice list asynchronously and fires 'voiceschanged'
+    // once it's ready. Speaking before that fires silently falls back to a
+    // default (often wrong-language, robotic) voice, which is a big part of
+    // why TTS can sound "terrible". We cache the list and refresh on the
+    // event instead of trusting a single synchronous read.
+    let cachedVoices = [];
+    function refreshVoiceCache() {
+      if ('speechSynthesis' in window) cachedVoices = window.speechSynthesis.getVoices();
+    }
+    if ('speechSynthesis' in window) {
+      refreshVoiceCache();
+      window.speechSynthesis.onvoiceschanged = refreshVoiceCache;
+    }
+
+    function pickVoiceFor(langCode) {
+      const prefix = langCode.split('-')[0];
+      return cachedVoices.find(v => v.lang === langCode)
+        || cachedVoices.find(v => v.lang && v.lang.toLowerCase().startsWith(prefix))
+        || null;
+    }
+
+    // ---- Text cleanup ----
+    // Sprout's replies are chat-formatted prose that may include markdown
+    // (**bold**, bullet dashes), emoji, and units. Speech engines read
+    // literal asterisks/backticks/emoji aloud (or choke on them), which is
+    // a second big source of "terrible"-sounding output. Strip anything
+    // that isn't meant to be heard before it ever reaches the synthesizer.
+    function cleanTextForSpeech(text) {
+      return text
+        .replace(/\*\*(.*?)\*\*/g, '$1')      // **bold**
+        .replace(/\*(.*?)\*/g, '$1')          // *italic*
+        .replace(/`([^`]*)`/g, '$1')          // `code`
+        .replace(/#{1,6}\s*/g, '')            // # headers
+        .replace(/^[-•]\s+/gm, '')            // bullet markers
+        .replace(/\p{Extended_Pictographic}/gu, '') // emoji
+        .replace(/°C/g, ' degrees C')
+        .replace(/°/g, ' degrees ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    // Splits cleaned text into speech-friendly sentence chunks. This isn't
+    // just cosmetic: Chrome has a long-standing bug where a single long
+    // utterance (~15s+ of speech) silently stops partway through with no
+    // error event. Speaking shorter sentences back-to-back sidesteps it
+    // and also gives more natural pacing/pauses than one run-on utterance.
+    function splitIntoSpeechChunks(text) {
+      const parts = text.match(/[^.!?।]+[.!?।]*/g) || [text];
+      return parts.map(p => p.trim()).filter(Boolean);
+    }
+
+    let speechChunkQueue = [];
+    let speechQueueActive = false;
+
+    function speakNextChunk() {
+      if (!speechChunkQueue.length) {
+        speechQueueActive = false;
+        return;
+      }
+      const chunk = speechChunkQueue.shift();
+      const utter = new SpeechSynthesisUtterance(chunk);
+      const langCode = ttsLangCode();
+      utter.lang = langCode;
+      utter.rate = 0.95;   // slightly slower than default — clearer for farm/technical terms
+      utter.pitch = 1;
+
+      const voice = pickVoiceFor(langCode);
+      if (voice) utter.voice = voice;
+
+      utter.onend = speakNextChunk;
+      utter.onerror = (e) => {
+        console.error('Speech synthesis chunk error:', e.error);
+        speakNextChunk(); // keep going rather than aborting the whole reply
+      };
+
+      window.speechSynthesis.speak(utter);
+    }
+
     function speakSproutReply(text) {
       if (!speakerOutputOn || !('speechSynthesis' in window) || !text) return;
-      try {
-        window.speechSynthesis.cancel(); // don't stack replies
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.lang = ttsLangCode();
-        // Prefer an installed voice matching the language if the browser has one.
-        const voices = window.speechSynthesis.getVoices();
-        const match = voices.find(v => v.lang === utter.lang) || voices.find(v => v.lang && v.lang.startsWith(utter.lang.split('-')[0]));
-        if (match) utter.voice = match;
-        window.speechSynthesis.speak(utter);
-      } catch (err) {
-        console.error('Speech synthesis error:', err);
+
+      const langCode = ttsLangCode();
+      const voice = pickVoiceFor(langCode);
+
+      // Being honest here matters: if there's no Tamil voice installed on
+      // this device, falling back to an English voice would read Tamil
+      // script with English phonemes — that's the "terrible" experience,
+      // not an improvement over saying nothing. Skip audio and say so once
+      // via a chat note instead of forcing garbled speech.
+      if (!voice && currentLang === 'ta') {
+        appendChatMsg(
+          'இந்த சாதனத்தில் தமிழ் குரல் நிறுவப்படவில்லை, எனவே பதிலை உரக்கப் படிக்க முடியவில்லை. (Text reply is above.)',
+          'bot'
+        );
+        return;
       }
+
+      window.speechSynthesis.cancel();
+      speechChunkQueue = splitIntoSpeechChunks(cleanTextForSpeech(text));
+      speechQueueActive = true;
+      speakNextChunk();
     }
 
     function setMicListeningUI(on) {
