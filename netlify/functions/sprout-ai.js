@@ -45,7 +45,17 @@ exports.handler = async (event, context) => {
 
     const body = JSON.parse(event.body);
     let systemInstructionText = body.system || "";
-    const messages = body.messages || [];
+    let messages = body.messages || [];
+
+    // --- FIX: trim history so latency doesn't grow with the conversation ---
+    // Every extra turn (and every previously-attached PDF re-sent as base64
+    // inside it) adds payload size and Gemini processing time, which is what
+    // was pushing calls past the 9s abort and surfacing as a 504. Only the
+    // most recent turns carry real context value for a Q&A chatbot like this.
+    const MAX_HISTORY_MESSAGES = 12; // ~6 user/assistant exchanges
+    if (messages.length > MAX_HISTORY_MESSAGES) {
+      messages = messages.slice(-MAX_HISTORY_MESSAGES);
+    }
 
     // Converts one message's `content` into Gemini `parts`. The frontend
     // (index.html) sends Claude/Anthropic-shaped content: either a plain
@@ -56,7 +66,14 @@ exports.handler = async (event, context) => {
     // each block is translated into the equivalent Gemini part:
     //   text block      -> { text: '...' }
     //   document block   -> { inlineData: { mimeType, data } }
-    function toGeminiParts(content) {
+    //
+    // `dropAttachments`: when true, document/image blocks are skipped and
+    // replaced with a short text placeholder instead of being sent again.
+    // Used for every message except the latest one — a PDF attached three
+    // turns ago doesn't need to be re-uploaded and re-processed by Gemini
+    // on every subsequent turn; that repeated cost is what was driving the
+    // 504 timeouts as conversations got longer.
+    function toGeminiParts(content, dropAttachments) {
       if (typeof content === 'string') {
         return [{ text: content }];
       }
@@ -65,12 +82,17 @@ exports.handler = async (event, context) => {
       }
 
       const parts = [];
+      let droppedCount = 0;
       for (const block of content) {
         if (!block) continue;
 
         if (block.type === 'text') {
           parts.push({ text: block.text || '' });
         } else if (block.type === 'document' && block.source && block.source.type === 'base64') {
+          if (dropAttachments) {
+            droppedCount++;
+            continue;
+          }
           parts.push({
             inlineData: {
               mimeType: block.source.media_type || 'application/pdf',
@@ -78,6 +100,10 @@ exports.handler = async (event, context) => {
             }
           });
         } else if (block.type === 'image' && block.source && block.source.type === 'base64') {
+          if (dropAttachments) {
+            droppedCount++;
+            continue;
+          }
           parts.push({
             inlineData: {
               mimeType: block.source.media_type || 'image/png',
@@ -87,6 +113,9 @@ exports.handler = async (event, context) => {
         }
         // Unknown block types are skipped rather than sent malformed.
       }
+      if (droppedCount > 0) {
+        parts.push({ text: `[${droppedCount} attachment(s) from this earlier message omitted to keep the request fast]` });
+      }
       // Gemini rejects parts arrays with no content — fall back to an empty
       // text part so a message with only an unsupported block doesn't 400.
       return parts.length ? parts : [{ text: '' }];
@@ -94,23 +123,27 @@ exports.handler = async (event, context) => {
 
     // 2. Safely filter and map conversation roles
     const geminiContents = [];
+    const lastIndex = messages.length - 1;
 
-    for (const msg of messages) {
+    messages.forEach((msg, i) => {
       // Extract system prompts if they were sent inside the messages array
       if (msg.role === 'system') {
         systemInstructionText = typeof msg.content === 'string' ? msg.content : systemInstructionText;
-        continue;
+        return;
       }
 
       // Properly map both 'assistant' and 'model' to Gemini's 'model' role.
       // Everything else becomes 'user'.
       const mappedRole = (msg.role === 'assistant' || msg.role === 'model') ? 'model' : 'user';
 
+      // Only the most recent message keeps its attachments in full.
+      const dropAttachments = i !== lastIndex;
+
       geminiContents.push({
         role: mappedRole,
-        parts: toGeminiParts(msg.content)
+        parts: toGeminiParts(msg.content, dropAttachments)
       });
-    }
+    });
 
     const payload = {
       contents: geminiContents,
