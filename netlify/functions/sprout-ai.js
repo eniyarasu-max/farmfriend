@@ -1,15 +1,27 @@
 exports.handler = async (event, context) => {
-  // Only allow POST requests
+  // 1. Handle Preflight/CORS requests (prevents browser block errors)
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS'
+      },
+      body: 'Preflight call successful'
+    };
+  }
+
+  // Only allow POST requests for the actual chat
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
   try {
-    // 1. Parse the incoming Anthropic-formatted request from index.html
+    // 2. Parse the request coming from index.html
     const { system, messages } = JSON.parse(event.body);
 
-    // 2. Map Anthropic roles to Gemini roles
-    // Gemini expects 'model' instead of 'assistant', and uses a nested 'parts' structure
+    // 3. Convert Anthropic-style message history into Gemini's format
     const geminiContents = messages.map(msg => ({
       role: msg.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: msg.content }]
@@ -19,24 +31,30 @@ exports.handler = async (event, context) => {
       contents: geminiContents,
     };
 
-    // 3. Add system instructions if provided by the frontend
+    // Add Sprout AI's system instructions if they exist
     if (system) {
       payload.systemInstruction = {
         parts: [{ text: system }]
       };
     }
 
-    // 4. Connect to the Google AI Studio REST API
-    // Ensure you have GEMINI_API_KEY set in your Netlify Environment Variables
+    // 4. Set up the Google AI Studio connection
     const apiKey = process.env.GEMINI_API_KEY;
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    
+    if (!apiKey) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: 'GEMINI_API_KEY environment variable is missing.' })
+      };
+    }
 
-    // Node 18+ on Netlify supports native fetch, so no external package is needed
+    // Connecting to the Gemini 3.6 Flash endpoint using the standard generateContent REST API
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
+
+    // 5. Fetch the response from Google
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
 
@@ -45,14 +63,14 @@ exports.handler = async (event, context) => {
     if (!response.ok) {
       return {
         statusCode: response.status,
-        body: JSON.stringify({ error: data.error?.message || 'Gemini API error' })
+        body: JSON.stringify({ error: data.error?.message || 'Gemini API failed to respond.' })
       };
     }
 
-    // 5. Extract the text from Gemini's response structure
-    const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't generate a response.";
+    // 6. Extract the AI's reply text
+    const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't process that.";
 
-    // 6. Shim the response back into the Anthropic format so index.html doesn't break
+    // 7. Format it back to what your frontend expects
     const simulatedAnthropicResponse = {
       content: [
         { text: replyText }
@@ -61,13 +79,17 @@ exports.handler = async (event, context) => {
 
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
       body: JSON.stringify(simulatedAnthropicResponse)
     };
+    
   } catch (error) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify({ error: 'Internal Server Error: ' + error.message })
     };
   }
 };
