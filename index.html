@@ -1676,27 +1676,36 @@
     }
 
     // Pulls the Organic Farming Library (Firebase /organic_pdfs) into (a) a plain
-    // list of titles/details for context, and (b) actual PDF document blocks for
-    // guides that were uploaded as files (data: URLs), so the model can read them
-    // directly instead of just seeing a title. Pasted external links can't be
-    // attached as file content (no server-side fetch here), so those stay as
-    // text-only references. Capped at 4 attached PDFs to keep the request light.
-    function buildLibraryContext() {
+    // list of titles/details for context — always included, so Sprout can
+    // mention any guide by name — and (b) the actual PDF bytes, but ONLY for
+    // a guide the question appears to name, capped to one attachment.
+    // Attaching every uploaded PDF to every message (even "hi") was pushing
+    // requests past Gemini's response time and Netlify's function timeout;
+    // attaching on-demand keeps normal chat messages small and fast while
+    // still letting the farmer ask "what does the Bio-Pesticide guide say?"
+    // and get an answer grounded in the real file.
+    function buildLibraryContext(question) {
       const keys = Object.keys(loadedPdfs);
       const textLines = [];
       const docs = [];
+      const q = (question || '').toLowerCase();
 
       keys.forEach((key) => {
         const pdf = loadedPdfs[key];
         textLines.push(`- "${pdf.title}" (${pdf.details || 'Organic farming guide'})`);
 
-        if (docs.length < 4 && pdf.url && pdf.url.startsWith('data:application/pdf;base64,')) {
-          docs.push({
-            type: 'document',
-            source: { type: 'base64', media_type: 'application/pdf', data: pdf.url.split(',')[1] },
-            title: pdf.title
-          });
-        }
+        if (docs.length >= 1) return; // at most one PDF attached per message
+        if (!pdf.url || !pdf.url.startsWith('data:application/pdf;base64,')) return;
+
+        const titleWords = pdf.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+        const isRelevant = titleWords.some(w => q.includes(w));
+        if (!isRelevant) return;
+
+        docs.push({
+          type: 'document',
+          source: { type: 'base64', media_type: 'application/pdf', data: pdf.url.split(',')[1] },
+          title: pdf.title
+        });
       });
 
       return {
@@ -1709,7 +1718,7 @@
     // Library and answer the farmer's question with grounded recommendations.
     async function askSproutAI(question) {
       const farmContext = buildFarmContext();
-      const library = buildLibraryContext();
+      const library = buildLibraryContext(question);
 
       const systemPrompt = `You are Sprout, a friendly, knowledgeable AI farming assistant built into the FarmFriend smart agriculture app. You help the farmer by analyzing their live ESP32 sensor readings against the app's Organic Farming Library (PDF guides on sustainable, chemical-free agriculture).
 
