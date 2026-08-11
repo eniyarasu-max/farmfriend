@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -860,8 +860,15 @@
 
     firebase.initializeApp(firebaseConfig);
 
-    // Required by pdf.js before getDocument() will run.
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js";
+    // Guarded: if the pdf.js CDN script is blocked, slow, or fails for any
+    // reason, this must NOT throw — an uncaught error here previously took
+    // down every line of app code after it (auth, tabs, chart, everything),
+    // since it ran synchronously before any of that was set up.
+    if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    } else {
+      console.warn('pdf.js did not load — PDF text extraction for Sprout AI will be skipped, but the rest of the app is unaffected.');
+    }
     const auth = firebase.auth();
     const db = firebase.database();
 
@@ -1024,6 +1031,7 @@
     const MAX_PDF_EXCERPT_CHARS = 12000; // plenty for grounding, cheap for Gemini to read
 
     async function extractPdfText(arrayBuffer) {
+      if (typeof pdfjsLib === 'undefined') return ''; // pdf.js didn't load — degrade gracefully
       try {
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
         let text = '';
