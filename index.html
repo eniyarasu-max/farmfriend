@@ -314,6 +314,57 @@
     .stat-chip .stat-value { font-family: 'Fraunces', serif; font-size: 20px; color: var(--moss-deep); margin-top: 2px; }
     .stat-chip .stat-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
 
+    /* ---- ESP32 connection badge ---- */
+    .connection-badge {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 14px;
+      border-radius: 20px;
+      font-size: 12.5px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .connection-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: 0 0 auto; }
+    .connection-badge.live {
+      background: rgba(74, 122, 99, 0.14);
+      color: var(--moss-deep);
+      border: 1px solid rgba(74, 122, 99, 0.3);
+    }
+    .connection-badge.live .dot { animation: pulse-dot 1.6s ease-in-out infinite; }
+    .connection-badge.stale {
+      background: rgba(209, 96, 74, 0.14);
+      color: var(--danger);
+      border: 1px solid rgba(209, 96, 74, 0.3);
+    }
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+    @media (max-width: 640px) {
+      .connection-badge { margin-left: 0; }
+    }
+
+    /* ---- CSV export button ---- */
+    .btn-export {
+      border: none;
+      background: rgba(74, 122, 99, 0.14);
+      color: var(--moss-deep);
+      border: 1px solid rgba(74, 122, 99, 0.25);
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 12.5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Manrope', sans-serif;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+    .btn-export:hover { transform: translateY(-1px); background: rgba(74, 122, 99, 0.22); }
+
+    /* ---- Sensor sanity-check flag ---- */
+    .sensor-error { color: var(--danger); font-weight: 700; }
+
     .chart-container { position: relative; height: 300px; width: 100%; }
 
     .history-timeline { margin-top: 16px; max-height: 240px; overflow-y: auto; }
@@ -640,6 +691,9 @@
             <h2>FarmVoice Analytics</h2>
             <p>"Hear what your farm says"</p>
           </div>
+          <div class="connection-badge live" id="connection-badge">
+            <span class="dot"></span><span id="connection-badge-text">Checking…</span>
+          </div>
         </div>
 
         <div class="analytics-controls">
@@ -659,7 +713,10 @@
       </div>
 
       <div class="card glass">
-        <h3><i class="fa-solid fa-clock-rotate-left"></i> Live ESP32 Telemetry Records</h3>
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom: 12px;">
+          <h3 style="margin-bottom:0;"><i class="fa-solid fa-clock-rotate-left"></i> Live ESP32 Telemetry Records</h3>
+          <button class="btn-export" onclick="exportHistoryCSV()"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+        </div>
         <div id="history-timeline" class="history-timeline">
           <p style="color: var(--muted);">Fetching historical records from ESP32...</p>
         </div>
@@ -850,6 +907,21 @@
 
   <script>
     // 1. Firebase Configuration
+    // ⚠️ SECURITY: this config (including apiKey) is public in the shipped JS
+    // by design — that's normal for Firebase web apps. What actually gates
+    // access is the Realtime Database's Security Rules, set in the Firebase
+    // console (Build > Realtime Database > Rules), NOT in this file. Confirm
+    // before demoing that rules are not left at the default "true"/"true"
+    // (readable+writable by anyone with this key). At minimum:
+    //   {
+    //     "rules": {
+    //       ".read": "auth != null",
+    //       ".write": "auth != null"
+    //     }
+    //   }
+    // This still allows any authenticated user to write, which is fine for a
+    // hackathon demo; lock further to a specific admin UID (auth.uid === "...")
+    // once app-mode is used beyond the login-gated app itself.
     const firebaseConfig = {
       apiKey: "AIzaSyCIJaV5lZiBtFUArJBvwsyulBY0Zif2Cgk",
       authDomain: "farmfriend-tech.firebaseapp.com",
@@ -927,6 +999,10 @@
       initChart();
       fetchHistoryData();
       listenToActiveCrop();
+
+      // Re-check staleness every 30s even if no new Firebase event fires —
+      // an ESP32 that's gone silent won't trigger a 'value' update on its own.
+      setInterval(updateConnectionBadge, 30 * 1000);
     }
 
     // Modal Helpers
@@ -1343,6 +1419,51 @@
       });
     }
 
+    // ---- Sensor sanity-checking -------------------------------------------
+    // A flaky sensor or loose wire tends to report physically-impossible
+    // values (pH of 0 or 9999, negative soil moisture, etc.) rather than just
+    // going quiet. Reject values outside plausible physical bounds before
+    // they ever reach the chart/stats/history/Sprout context — a bad cable
+    // on stage shouldn't be able to spike the graph or confuse the AI.
+    // Flagged fields are dropped from the reading (not shown as a fabricated
+    // number) and recorded in _sensorErrors so the UI can say "sensor error"
+    // instead of the ambiguous "--" used for a genuinely missing field.
+    const SENSOR_BOUNDS = {
+      temperature: { min: -10, max: 60 },   // °C
+      humidity: { min: 0, max: 100 },       // %
+      soilPercent: { min: 0, max: 100 },    // %
+      phValue: { min: 0, max: 14 },
+      nitrogen: { min: 0, max: 2000 },      // mg/kg
+      phosphorus: { min: 0, max: 2000 },    // mg/kg
+      potassium: { min: 0, max: 2000 }      // mg/kg
+    };
+
+    function sanitizeReading(item) {
+      if (!item) return item;
+      const clean = { ...item };
+      const errors = [];
+      Object.keys(SENSOR_BOUNDS).forEach((field) => {
+        const bound = SENSOR_BOUNDS[field];
+        const value = clean[field];
+        if (typeof value === 'number' && (Number.isNaN(value) || value < bound.min || value > bound.max)) {
+          errors.push(field);
+          delete clean[field];
+        }
+      });
+      if (errors.length) clean._sensorErrors = errors;
+      return clean;
+    }
+
+    // Formats a single field for display, distinguishing "sensor error"
+    // (value was present but outside plausible bounds) from "--" (field is
+    // genuinely absent from this reading).
+    function fmtField(item, field, decimals, unit) {
+      if (item._sensorErrors && item._sensorErrors.includes(field)) {
+        return '<span class="sensor-error">⚠️ error</span>';
+      }
+      return typeof item[field] === 'number' ? item[field].toFixed(decimals) + unit : '--';
+    }
+
     // Real-Time ESP32 Listener directly reading keys: humidity, phValue, soilPercent, temperature
     // Pulls a larger window so the 1-week / 1-month / 1-year filters have real
     // historical spread to aggregate over, instead of just re-slicing the same
@@ -1359,7 +1480,7 @@
         if (data) {
           const items = [];
           Object.keys(data).forEach(key => {
-            items.push(data[key]);
+            items.push(sanitizeReading(data[key]));
           });
           historyDataStore = items;
 
@@ -1369,8 +1490,8 @@
             const withNpk = withDummyNPK(item);
             return `
             <div class="history-item">
-              <span>🌡️ Temp: ${item.temperature ? item.temperature.toFixed(1) : '--'}°C | 💧 Hum: ${item.humidity ? item.humidity.toFixed(1) : '--'}%</span>
-              <span>🌾 Soil: ${item.soilPercent ? item.soilPercent.toFixed(1) : '--'}% | 🧪 pH: ${item.phValue ? item.phValue.toFixed(2) : '--'}</span>
+              <span>🌡️ Temp: ${fmtField(item, 'temperature', 1, '°C')} | 💧 Hum: ${fmtField(item, 'humidity', 1, '%')}</span>
+              <span>🌾 Soil: ${fmtField(item, 'soilPercent', 1, '%')} | 🧪 pH: ${fmtField(item, 'phValue', 2, '')}</span>
               <span>🍃 N: ${withNpk.nitrogen}${withNpk.npkIsDemo ? '*' : ''} | P: ${withNpk.phosphorus}${withNpk.npkIsDemo ? '*' : ''} | K: ${withNpk.potassium}${withNpk.npkIsDemo ? '*' : ''} mg/kg</span>
             </div>
           `;
@@ -1383,7 +1504,79 @@
         }
 
         checkAlerts();
+        updateConnectionBadge();
       });
+    }
+
+    // ---- "Is my ESP32 online?" badge ---------------------------------------
+    // Compares the latest reading's timestamp against the current time so a
+    // disconnected device doesn't just silently keep showing its last reading
+    // with no indication it's stale. Re-checked on a timer too, since a
+    // device that goes quiet won't fire a new Firebase 'value' event to
+    // trigger a re-render on its own.
+    const STALE_AFTER_MS = 2 * 60 * 1000; // consider offline after 2 min of silence
+
+    function updateConnectionBadge() {
+      const badge = document.getElementById('connection-badge');
+      const text = document.getElementById('connection-badge-text');
+      if (!badge || !text) return;
+
+      const reading = getLatestReading();
+      if (!reading || typeof reading.timestamp !== 'number') {
+        badge.className = 'connection-badge stale';
+        text.textContent = 'No data yet';
+        return;
+      }
+
+      const ageMs = Date.now() - reading.timestamp;
+      if (ageMs < STALE_AFTER_MS) {
+        badge.className = 'connection-badge live';
+        text.textContent = 'Live';
+        return;
+      }
+
+      const ageMin = Math.floor(ageMs / 60000);
+      badge.className = 'connection-badge stale';
+      text.textContent = ageMin < 60
+        ? `Last seen ${ageMin} min ago ⚠️`
+        : `Last seen ${Math.floor(ageMin / 60)}h ago ⚠️`;
+    }
+
+    // ---- CSV export ---------------------------------------------------------
+    function exportHistoryCSV() {
+      if (!historyDataStore.length) {
+        alert('No sensor history to export yet.');
+        return;
+      }
+
+      const fields = ['timestamp', 'temperature', 'humidity', 'soilPercent', 'phValue', 'nitrogen', 'phosphorus', 'potassium'];
+      const header = ['timestamp_iso', ...fields.filter(f => f !== 'timestamp')];
+
+      const rows = historyDataStore.map(raw => {
+        const item = withDummyNPK(raw);
+        const iso = typeof item.timestamp === 'number' ? new Date(item.timestamp).toISOString() : '';
+        return [
+          iso,
+          typeof item.temperature === 'number' ? item.temperature : '',
+          typeof item.humidity === 'number' ? item.humidity : '',
+          typeof item.soilPercent === 'number' ? item.soilPercent : '',
+          typeof item.phValue === 'number' ? item.phValue : '',
+          item.nitrogen,
+          item.phosphorus,
+          item.potassium
+        ].join(',');
+      });
+
+      const csv = [header.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `farmfriend-sensor-history-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
 
     // Returns the most recent sensor reading object, or null if none logged yet.
