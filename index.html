@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js"></script>
 
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -858,6 +859,9 @@
     };
 
     firebase.initializeApp(firebaseConfig);
+
+    // Required by pdf.js before getDocument() will run.
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js";
     const auth = firebase.auth();
     const db = firebase.database();
 
@@ -1011,6 +1015,34 @@
     }
 
     // Save New PDF
+    // Also extracts the PDF's text (via pdf.js, loaded in <head>) once at
+    // upload time, storing it as pdf.textContent. This is what
+    // buildLibraryContext() sends to Sprout AI for a relevant question —
+    // reading pre-extracted plain text is fast, versus the old approach of
+    // re-sending the raw PDF for Gemini to parse on every single question,
+    // which was slow enough to trip both our own timeout and Netlify's.
+    const MAX_PDF_EXCERPT_CHARS = 12000; // plenty for grounding, cheap for Gemini to read
+
+    async function extractPdfText(arrayBuffer) {
+      try {
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let text = '';
+        const pageCount = Math.min(pdf.numPages, 30); // cap pages read for very long guides
+        for (let i = 1; i <= pageCount; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map(it => it.str).join(' ') + '\n';
+          if (text.length > MAX_PDF_EXCERPT_CHARS) break;
+        }
+        return text.slice(0, MAX_PDF_EXCERPT_CHARS).trim();
+      } catch (err) {
+        // Scanned/image-only PDFs have no text layer — that's fine, Sprout
+        // just falls back to knowing the guide's title, not its full content.
+        console.warn('PDF text extraction skipped:', err.message);
+        return '';
+      }
+    }
+
     function savePdfToDatabase(e) {
       e.preventDefault();
 
@@ -1018,15 +1050,19 @@
       const details = document.getElementById('new-pdf-details').value.trim();
       const urlInput = document.getElementById('new-pdf-url').value.trim();
       const fileInput = document.getElementById('new-pdf-file');
+      const submitBtn = e.target.querySelector('button[type="submit"]');
 
-      const pushPdfToDb = (pdfDataUrl) => {
+      const pushPdfToDb = (pdfDataUrl, textContent) => {
         const newPdf = { title, details, url: pdfDataUrl || '#' };
+        if (textContent) newPdf.textContent = textContent;
 
         db.ref('/organic_pdfs').push(newPdf).then(() => {
           alert('New Organic Farming PDF successfully added!');
           document.getElementById('add-pdf-form').reset();
         }).catch((err) => {
           alert('Error uploading PDF: ' + err.message);
+        }).finally(() => {
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Upload & Save PDF'; }
         });
       };
 
@@ -1037,13 +1073,26 @@
           return;
         }
 
-        const reader = new FileReader();
-        reader.onload = function (event) {
-          pushPdfToDb(event.target.result);
-        };
-        reader.readAsDataURL(file);
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = 'Reading PDF…'; }
+
+        file.arrayBuffer().then(async (buffer) => {
+          // Extract text from a copy of the buffer (readAsDataURL below reads
+          // the same File separately, so this doesn't consume it).
+          const textContent = await extractPdfText(buffer.slice(0));
+
+          const reader = new FileReader();
+          reader.onload = function (event) {
+            pushPdfToDb(event.target.result, textContent);
+          };
+          reader.readAsDataURL(file);
+        }).catch((err) => {
+          alert('Could not read that PDF file: ' + err.message);
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Upload & Save PDF'; }
+        });
       } else if (urlInput) {
-        pushPdfToDb(urlInput);
+        // Pasted links can't be text-extracted client-side (no server-side
+        // fetch here to sidestep CORS), so they stay title/details-only.
+        pushPdfToDb(urlInput, '');
       } else {
         alert("Please select a PDF file or paste a web link!");
       }
@@ -1308,12 +1357,16 @@
 
           // Render live item log (most recent 30 entries, newest first)
           const recent = items.slice(-30).reverse();
-          timeline.innerHTML = recent.map(item => `
+          timeline.innerHTML = recent.map(item => {
+            const withNpk = withDummyNPK(item);
+            return `
             <div class="history-item">
               <span>🌡️ Temp: ${item.temperature ? item.temperature.toFixed(1) : '--'}°C | 💧 Hum: ${item.humidity ? item.humidity.toFixed(1) : '--'}%</span>
               <span>🌾 Soil: ${item.soilPercent ? item.soilPercent.toFixed(1) : '--'}% | 🧪 pH: ${item.phValue ? item.phValue.toFixed(2) : '--'}</span>
+              <span>🍃 N: ${withNpk.nitrogen}${withNpk.npkIsDemo ? '*' : ''} | P: ${withNpk.phosphorus}${withNpk.npkIsDemo ? '*' : ''} | K: ${withNpk.potassium}${withNpk.npkIsDemo ? '*' : ''} mg/kg</span>
             </div>
-          `).join('');
+          `;
+          }).join('');
 
           updateChartGraph(currentFilter);
         } else {
@@ -1328,8 +1381,51 @@
     // Returns the most recent sensor reading object, or null if none logged yet.
     function getLatestReading() {
       if (!historyDataStore.length) return null;
-      return historyDataStore[historyDataStore.length - 1];
+      return withDummyNPK(historyDataStore[historyDataStore.length - 1]);
     }
+
+    // ---- NPK demo layer -----------------------------------------------
+    // The ESP32 rig doesn't have a physical NPK (nitrogen / phosphorus /
+    // potassium) sensor wired in yet, so these are simulated client-side —
+    // clearly flagged as demo values (see npkIsDemo / the "*" in the UI)
+    // rather than presented as real readings. Deterministic per reading
+    // (seeded off its timestamp) so a given reading always shows the same
+    // values instead of flickering on every re-render, but drifts reading
+    // to reading so the dashboard still feels alive.
+    // The moment a real NPK sensor starts writing nitrogen/phosphorus/
+    // potassium fields to Firebase, this backs off automatically — it only
+    // fills in fields that are actually missing.
+    function seededRandom(seed) {
+      const x = Math.sin(seed) * 10000;
+      return x - Math.floor(x);
+    }
+
+    function withDummyNPK(item) {
+      if (!item) return item;
+      const hasReal = typeof item.nitrogen === 'number' && typeof item.phosphorus === 'number' && typeof item.potassium === 'number';
+      if (hasReal) return item;
+
+      const seed = (item.timestamp ? item.timestamp / 1000 : null) || (historyDataStore.indexOf(item) + 1) * 37;
+      const n = Math.round(60 + seededRandom(seed) * 80);       // ~60-140 mg/kg
+      const p = Math.round(15 + seededRandom(seed + 1) * 35);   // ~15-50 mg/kg
+      const k = Math.round(90 + seededRandom(seed + 2) * 160);  // ~90-250 mg/kg
+
+      return {
+        ...item,
+        nitrogen: typeof item.nitrogen === 'number' ? item.nitrogen : n,
+        phosphorus: typeof item.phosphorus === 'number' ? item.phosphorus : p,
+        potassium: typeof item.potassium === 'number' ? item.potassium : k,
+        npkIsDemo: true
+      };
+    }
+
+    // Generic "medium fertility loam" reference ranges (mg/kg) used until
+    // Plantcyclopedia entries carry per-crop NPK ranges of their own.
+    const GENERIC_NPK_RANGES = {
+      nitrogen: { min: 80, max: 120 },
+      phosphorus: { min: 20, max: 40 },
+      potassium: { min: 150, max: 250 }
+    };
 
     // Parses stored optimum-range strings like "22 - 32 °C", "5.5 - 6.5", "70 - 90%"
     // into { min, max } numbers. Returns null if the string can't be parsed.
@@ -1598,15 +1694,19 @@
       const checks = [
         { field: 'temperature', rangeStr: plant.temp, label: 'Temperature', unit: '°C', decimals: 1 },
         { field: 'soilPercent', rangeStr: plant.moisture, label: 'Soil Moisture', unit: '%', decimals: 1 },
-        { field: 'phValue', rangeStr: plant.ph, label: 'Soil pH', unit: '', decimals: 2 }
+        { field: 'phValue', rangeStr: plant.ph, label: 'Soil pH', unit: '', decimals: 2 },
+        { field: 'nitrogen', range: GENERIC_NPK_RANGES.nitrogen, label: 'Nitrogen (N)', unit: ' mg/kg', decimals: 0, demo: reading.npkIsDemo },
+        { field: 'phosphorus', range: GENERIC_NPK_RANGES.phosphorus, label: 'Phosphorus (P)', unit: ' mg/kg', decimals: 0, demo: reading.npkIsDemo },
+        { field: 'potassium', range: GENERIC_NPK_RANGES.potassium, label: 'Potassium (K)', unit: ' mg/kg', decimals: 0, demo: reading.npkIsDemo }
       ];
 
       container.innerHTML = checks.map(c => {
         const value = reading[c.field];
-        const range = parseRange(c.rangeStr);
+        const range = c.range || parseRange(c.rangeStr);
+        const rangeLabel = c.rangeStr || (c.range ? `${c.range.min}-${c.range.max}${c.unit}` : '');
         const hasValue = typeof value === 'number';
         let status = 'ok';
-        let tip = `Within the optimum ${c.rangeStr} range for ${plant.name}. Keep it up!`;
+        let tip = `Within the optimum ${rangeLabel} range for ${plant.name}. Keep it up!`;
 
         if (hasValue && range) {
           if (value < range.min) {
@@ -1615,14 +1715,18 @@
               ? `Below optimum — consider irrigating soon.`
               : c.field === 'temperature'
                 ? `Below optimum — consider shading or waiting for warmer conditions.`
-                : `Below optimum pH — consider adding lime or an alkaline amendment.`;
+                : c.field === 'phValue'
+                  ? `Below optimum pH — consider adding lime or an alkaline amendment.`
+                  : `Below the ${rangeLabel} reference range — consider an organic amendment rich in this nutrient.`;
           } else if (value > range.max) {
             status = 'warn';
             tip = c.field === 'soilPercent'
               ? `Above optimum — hold off on watering and check drainage.`
               : c.field === 'temperature'
                 ? `Above optimum — consider shading during peak heat.`
-                : `Above optimum pH — consider an acidifying amendment like sulfur.`;
+                : c.field === 'phValue'
+                  ? `Above optimum pH — consider an acidifying amendment like sulfur.`
+                  : `Above the ${rangeLabel} reference range — ease off amendments containing this nutrient.`;
           }
         } else if (!hasValue) {
           tip = 'No recent reading for this metric.';
@@ -1630,12 +1734,14 @@
 
         return `
           <div class="insight-card ${status}">
-            <div class="insight-label">${c.label}</div>
+            <div class="insight-label">${c.label}${c.demo ? ' *' : ''}</div>
             <div class="insight-value">${hasValue ? value.toFixed(c.decimals) + c.unit : '--'}</div>
             <div class="insight-tip">${tip}</div>
           </div>
         `;
-      }).join('');
+      }).join('') + (reading.npkIsDemo
+        ? `<p style="grid-column: 1/-1; font-size: 11px; color: var(--muted); margin-top: 4px;">* N/P/K simulated for demo — no physical NPK sensor connected yet.</p>`
+        : '');
     }
 
     // Lightweight rule-based assistant — runs entirely client-side (no backend/API
@@ -1665,7 +1771,8 @@
         ? `Latest live sensor reading — Temp: ${typeof reading.temperature === 'number' ? reading.temperature.toFixed(1) + '°C' : 'n/a'}, ` +
           `Soil moisture: ${typeof reading.soilPercent === 'number' ? reading.soilPercent.toFixed(1) + '%' : 'n/a'}, ` +
           `pH: ${typeof reading.phValue === 'number' ? reading.phValue.toFixed(2) : 'n/a'}, ` +
-          `Humidity: ${typeof reading.humidity === 'number' ? reading.humidity.toFixed(1) + '%' : 'n/a'}.`
+          `Humidity: ${typeof reading.humidity === 'number' ? reading.humidity.toFixed(1) + '%' : 'n/a'}, ` +
+          `N-P-K: ${reading.nitrogen}-${reading.phosphorus}-${reading.potassium} mg/kg${reading.npkIsDemo ? ' (simulated demo values — no physical NPK sensor connected yet, mention this if asked)' : ''}.`
         : 'No live sensor readings available yet — the ESP32 may be offline.');
 
       lines.push(activeAlerts.length
@@ -1684,38 +1791,41 @@
     // attaching on-demand keeps normal chat messages small and fast while
     // still letting the farmer ask "what does the Bio-Pesticide guide say?"
     // and get an answer grounded in the real file.
+    //
+    // NOTE: this used to attach the raw PDF bytes for Gemini to read live,
+    // which was slow enough (multimodal PDF parsing) to blow past both our
+    // own abort budget and Netlify's function timeout on guide-specific
+    // questions. Guides are now text-extracted once at upload time
+    // (see savePdfToDatabase's pdf.js step) and stored as pdf.textContent —
+    // reusing that here is dramatically faster since Gemini is just reading
+    // plain text, not parsing a document.
     function buildLibraryContext(question) {
       const keys = Object.keys(loadedPdfs);
       const textLines = [];
-      const docs = [];
+      let relevantExcerpt = '';
       const q = (question || '').toLowerCase();
 
       keys.forEach((key) => {
         const pdf = loadedPdfs[key];
         textLines.push(`- "${pdf.title}" (${pdf.details || 'Organic farming guide'})`);
 
-        if (docs.length >= 1) return; // at most one PDF attached per message
-        if (!pdf.url || !pdf.url.startsWith('data:application/pdf;base64,')) return;
+        if (relevantExcerpt || !pdf.textContent) return; // at most one guide's text per message
 
         const titleWords = pdf.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
         const isRelevant = titleWords.some(w => q.includes(w));
         if (!isRelevant) return;
 
-        docs.push({
-          type: 'document',
-          source: { type: 'base64', media_type: 'application/pdf', data: pdf.url.split(',')[1] },
-          title: pdf.title
-        });
+        relevantExcerpt = `\n\nFull excerpt from "${pdf.title}":\n${pdf.textContent}`;
       });
 
       return {
-        text: textLines.length ? textLines.join('\n') : 'No guides currently in the library.',
-        docs
+        text: (textLines.length ? textLines.join('\n') : 'No guides currently in the library.') + relevantExcerpt
       };
     }
 
-    // Calls Claude to analyze the live farm data against the Organic Farming
-    // Library and answer the farmer's question with grounded recommendations.
+    // Calls our Sprout AI backend to analyze the live farm data against the
+    // Organic Farming Library and answer the farmer's question with grounded
+    // recommendations.
     async function askSproutAI(question) {
       const farmContext = buildFarmContext();
       const library = buildLibraryContext(question);
@@ -1729,22 +1839,20 @@ Organic Farming Library available:
 ${library.text}
 
 Instructions:
-- Ground your recommendations in the attached PDF guides whenever they're relevant — refer to them by title when you use them (e.g. "Per the 'Bio-Pesticide Preparation Guide'...").
-- If no attached guide covers the question, you may draw on general organic-farming knowledge, but make clear you're not quoting a specific guide.
+- Ground your recommendations in the library excerpt above whenever it's relevant — refer to the guide by title when you use it (e.g. "Per the 'Bio-Pesticide Preparation Guide'...").
+- If no excerpt covers the question, you may draw on general organic-farming knowledge, but make clear you're not quoting a specific guide.
 - Always favor organic, chemical-free recommendations, consistent with the app's focus.
 - If a sensor reading is out of range, proactively connect your advice to it.
 - Be concise, warm, and practical — this is a chat bubble on a phone. 3-5 sentences unless the farmer asks for a full plan.`;
 
-      const messageContent = [{ type: 'text', text: question }, ...library.docs];
-
       // Calls our own Netlify Function (netlify/functions/sprout-ai.js) rather
-      // than api.anthropic.com directly, so the API key stays server-side.
+      // than calling an AI API directly, so the API key stays server-side.
       const response = await fetch('/.netlify/functions/sprout-ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           system: systemPrompt,
-          messages: [{ role: 'user', content: messageContent }]
+          messages: [{ role: 'user', content: question }]
         })
       });
 
