@@ -618,6 +618,26 @@
       background: var(--moss); color: white; border: none;
       padding: 0 18px; border-radius: 12px; cursor: pointer; font-weight: 700;
     }
+    .btn-mic {
+      background: rgba(74,122,99,0.14) !important; color: var(--moss-deep) !important;
+      padding: 0 14px !important; border: 1px solid rgba(74,122,99,0.3) !important;
+    }
+    .btn-mic.listening {
+      background: var(--clay) !important; color: white !important;
+      border-color: var(--clay-deep) !important;
+      animation: mic-pulse 1.1s ease-in-out infinite;
+    }
+    @keyframes mic-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(231, 135, 107, 0.5); }
+      50% { box-shadow: 0 0 0 8px rgba(231, 135, 107, 0); }
+    }
+    .btn-speaker {
+      background: rgba(255,255,255,0.5); color: var(--muted);
+      border: 1px solid rgba(74,122,99,0.25); border-radius: 10px;
+      width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 12px; flex: 0 0 auto;
+    }
+    .btn-speaker.active { background: var(--moss); color: white; border-color: var(--moss-deep); }
     .sprout-chat-suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
     .chip-suggestion {
       background: rgba(74,122,99,0.12); color: var(--moss-deep);
@@ -791,7 +811,12 @@
         <div class="sprout-insights" id="sprout-insights"></div>
 
         <div class="sprout-chat">
-          <h3><i class="fa-solid fa-comment-dots"></i> <span data-i18n="sprout.askTitle">Ask Sprout</span></h3>
+          <h3 style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <span><i class="fa-solid fa-comment-dots"></i> <span data-i18n="sprout.askTitle">Ask Sprout</span></span>
+            <button type="button" class="btn-speaker" id="sprout-speaker-toggle" onclick="toggleSpeakerOutput()" title="Read replies aloud">
+              <i class="fa-solid fa-volume-xmark" id="sprout-speaker-icon"></i>
+            </button>
+          </h3>
           <div class="sprout-chat-suggestions">
             <span class="chip-suggestion" data-i18n="sprout.chip1" onclick="sendSproutMessage('How is my farm doing?')">How is my farm doing?</span>
             <span class="chip-suggestion" data-i18n="sprout.chip2" onclick="sendSproutMessage('What is the soil moisture?')">Soil moisture?</span>
@@ -803,6 +828,9 @@
           </div>
           <div class="sprout-chat-input-row">
             <input type="text" id="sprout-chat-input" placeholder="Ask about temperature, moisture, pH..." data-i18n-placeholder="sprout.chatPlaceholder" onkeydown="if(event.key==='Enter') sendSproutMessage()" />
+            <button type="button" class="btn-mic" id="sprout-mic-btn" onclick="toggleVoiceInput()" title="Speak your question">
+              <i class="fa-solid fa-microphone"></i>
+            </button>
             <button onclick="sendSproutMessage()"><i class="fa-solid fa-paper-plane"></i></button>
           </div>
         </div>
@@ -1009,7 +1037,10 @@
 
     // Apply saved/default language once the DOM is parsed, before other
     // init code (below) starts populating dynamic content.
-    document.addEventListener('DOMContentLoaded', () => applyLanguage(currentLang));
+    document.addEventListener('DOMContentLoaded', () => {
+      applyLanguage(currentLang);
+      updateSpeakerButtonUI();
+    });
 
     // 1. Firebase Configuration
     // ⚠️ SECURITY: this config (including apiKey) is public in the shipped JS
@@ -2050,6 +2081,102 @@
         : '');
     }
 
+    // ---- Voice input/output for Sprout AI (Web Speech API) ----
+    // Fully client-side, no extra backend calls: SpeechRecognition transcribes
+    // the farmer's spoken question into the existing chat input, and
+    // speechSynthesis reads Sprout's reply aloud. Language follows the
+    // English/Tamil toggle above (see applyLanguage / currentLang).
+    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let sproutRecognition = null;
+    let sproutListening = false;
+    let speakerOutputOn = localStorage.getItem('ff_speak') === '1';
+
+    function sttLangCode() { return currentLang === 'ta' ? 'ta-IN' : 'en-IN'; }
+    function ttsLangCode() { return currentLang === 'ta' ? 'ta-IN' : 'en-IN'; }
+
+    function updateSpeakerButtonUI() {
+      const btn = document.getElementById('sprout-speaker-toggle');
+      const icon = document.getElementById('sprout-speaker-icon');
+      if (!btn || !icon) return;
+      btn.classList.toggle('active', speakerOutputOn);
+      icon.className = speakerOutputOn ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+    }
+
+    function toggleSpeakerOutput() {
+      speakerOutputOn = !speakerOutputOn;
+      localStorage.setItem('ff_speak', speakerOutputOn ? '1' : '0');
+      updateSpeakerButtonUI();
+      if (!speakerOutputOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+    }
+
+    function speakSproutReply(text) {
+      if (!speakerOutputOn || !('speechSynthesis' in window) || !text) return;
+      try {
+        window.speechSynthesis.cancel(); // don't stack replies
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = ttsLangCode();
+        // Prefer an installed voice matching the language if the browser has one.
+        const voices = window.speechSynthesis.getVoices();
+        const match = voices.find(v => v.lang === utter.lang) || voices.find(v => v.lang && v.lang.startsWith(utter.lang.split('-')[0]));
+        if (match) utter.voice = match;
+        window.speechSynthesis.speak(utter);
+      } catch (err) {
+        console.error('Speech synthesis error:', err);
+      }
+    }
+
+    function setMicListeningUI(on) {
+      const btn = document.getElementById('sprout-mic-btn');
+      if (!btn) return;
+      btn.classList.toggle('listening', on);
+      btn.innerHTML = on ? '<i class="fa-solid fa-stop"></i>' : '<i class="fa-solid fa-microphone"></i>';
+    }
+
+    function toggleVoiceInput() {
+      if (!SpeechRecognitionCtor) {
+        alert(currentLang === 'ta'
+          ? 'இந்த உலாவியில் குரல் உள்ளீடு ஆதரிக்கப்படவில்லை. Chrome-ஐ முயற்சிக்கவும்.'
+          : 'Voice input is not supported in this browser. Try Chrome on Android/desktop.');
+        return;
+      }
+      if (sproutListening) {
+        sproutRecognition && sproutRecognition.stop();
+        return;
+      }
+
+      sproutRecognition = new SpeechRecognitionCtor();
+      sproutRecognition.lang = sttLangCode();
+      sproutRecognition.interimResults = false;
+      sproutRecognition.maxAlternatives = 1;
+
+      sproutRecognition.onstart = () => {
+        sproutListening = true;
+        setMicListeningUI(true);
+      };
+
+      sproutRecognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        const input = document.getElementById('sprout-chat-input');
+        if (input) input.value = transcript;
+        sendSproutMessage(); // auto-send, same as pressing Enter
+      };
+
+      sproutRecognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+      };
+
+      sproutRecognition.onend = () => {
+        sproutListening = false;
+        setMicListeningUI(false);
+      };
+
+      try {
+        sproutRecognition.start();
+      } catch (err) {
+        console.error('Could not start speech recognition:', err);
+      }
+    }
+
     // Lightweight rule-based assistant — runs entirely client-side (no backend/API
     // key needed) using the live sensor readings + selected crop's optimum data.
     function appendChatMsg(text, who) {
@@ -2189,6 +2316,7 @@ Instructions:
         .then((reply) => {
           thinkingEl.classList.remove('typing');
           thinkingEl.innerText = reply;
+          speakSproutReply(reply);
         })
         .catch((err) => {
           console.error('Sprout AI error:', err);
