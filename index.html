@@ -653,10 +653,13 @@
     </div>
     <div class="user-actions">
       <span id="user-display">Loading...</span>
-      <button class="btn-admin" id="admin-panel-btn" onclick="openAdminAuthModal()">
-        <i class="fa-solid fa-user-gear"></i> Admin
+      <button class="btn-admin" id="lang-toggle-btn" onclick="toggleLanguage()" title="Switch language / மொழியை மாற்று">
+        <i class="fa-solid fa-language"></i> <span id="lang-toggle-label">தமிழ்</span>
       </button>
-      <button class="btn-logout" id="logout-btn">Logout</button>
+      <button class="btn-admin" id="admin-panel-btn" onclick="openAdminAuthModal()">
+        <i class="fa-solid fa-user-gear"></i> <span data-i18n="nav.admin">Admin</span>
+      </button>
+      <button class="btn-logout" id="logout-btn"><span data-i18n="nav.logout">Logout</span></button>
     </div>
   </div>
 
@@ -666,16 +669,16 @@
   <!-- Navigation Tabs -->
   <div class="nav-tabs">
     <button class="tab-btn active" onclick="switchTab('farmvoice', event)">
-      <i class="fa-solid fa-chart-line"></i> FarmVoice
+      <i class="fa-solid fa-chart-line"></i> <span data-i18n="tab.farmvoice">FarmVoice</span>
     </button>
     <button class="tab-btn" onclick="switchTab('plantcyclopedia', event)">
-      <i class="fa-solid fa-book-open-reader"></i> Plantcyclopedia
+      <i class="fa-solid fa-book-open-reader"></i> <span data-i18n="tab.plant">Plantcyclopedia</span>
     </button>
     <button class="tab-btn" onclick="switchTab('organic', event)">
-      <i class="fa-solid fa-leaf"></i> Organic Farming
+      <i class="fa-solid fa-leaf"></i> <span data-i18n="tab.organic">Organic Farming</span>
     </button>
     <button class="tab-btn" onclick="switchTab('sprout', event)">
-      <i class="fa-solid fa-worm"></i> Sprout AI <span class="tab-badge" id="sprout-alert-badge">0</span>
+      <i class="fa-solid fa-worm"></i> <span data-i18n="tab.sprout">Sprout AI</span> <span class="tab-badge" id="sprout-alert-badge">0</span>
     </button>
   </div>
 
@@ -688,8 +691,8 @@
         <div class="module-header">
           <div class="module-clipart"><i class="fa-solid fa-volume-high"></i></div>
           <div class="module-title">
-            <h2>FarmVoice Analytics</h2>
-            <p>"Hear what your farm says"</p>
+            <h2 data-i18n="farmvoice.title">FarmVoice Analytics</h2>
+            <p data-i18n="farmvoice.subtitle">"Hear what your farm says"</p>
           </div>
           <div class="connection-badge live" id="connection-badge">
             <span class="dot"></span><span id="connection-badge-text">Checking…</span>
@@ -697,10 +700,10 @@
         </div>
 
         <div class="analytics-controls">
-          <button class="time-btn active" onclick="updateTimeFilter('1day', this)">1 Day</button>
-          <button class="time-btn" onclick="updateTimeFilter('1week', this)">1 Week</button>
-          <button class="time-btn" onclick="updateTimeFilter('1month', this)">1 Month</button>
-          <button class="time-btn" onclick="updateTimeFilter('1year', this)">1 Year</button>
+          <button class="time-btn active" onclick="updateTimeFilter('1day', this)" data-i18n="time.1day">1 Day</button>
+          <button class="time-btn" onclick="updateTimeFilter('1week', this)" data-i18n="time.1week">1 Week</button>
+          <button class="time-btn" onclick="updateTimeFilter('1month', this)" data-i18n="time.1month">1 Month</button>
+          <button class="time-btn" onclick="updateTimeFilter('1year', this)" data-i18n="time.1year">1 Year</button>
         </div>
 
         <div class="stat-row" id="stat-row">
@@ -714,11 +717,11 @@
 
       <div class="card glass">
         <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom: 12px;">
-          <h3 style="margin-bottom:0;"><i class="fa-solid fa-clock-rotate-left"></i> Live ESP32 Telemetry Records</h3>
-          <button class="btn-export" onclick="exportHistoryCSV()"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+          <h3 style="margin-bottom:0;"><i class="fa-solid fa-clock-rotate-left"></i> <span data-i18n="telemetry.title">Live ESP32 Telemetry Records</span></h3>
+          <button class="btn-export" onclick="exportHistoryCSV()"><i class="fa-solid fa-file-csv"></i> <span data-i18n="telemetry.export">Export CSV</span></button>
         </div>
         <div id="history-timeline" class="history-timeline">
-          <p style="color: var(--muted);">Fetching historical records from ESP32...</p>
+          <p style="color: var(--muted);" data-i18n="telemetry.fetching">Fetching historical records from ESP32...</p>
         </div>
       </div>
     </div>
@@ -729,8 +732,8 @@
         <div class="module-header">
           <div class="module-clipart"><i class="fa-solid fa-book-bookmark"></i></div>
           <div class="module-title">
-            <h2>Plantcyclopedia</h2>
-            <p>Crop Wisdom & Optimal Soil Conditions</p>
+            <h2 data-i18n="plant.title">Plantcyclopedia</h2>
+            <p data-i18n="plant.subtitle">Crop Wisdom & Optimal Soil Conditions</p>
           </div>
         </div>
 
@@ -744,8 +747,8 @@
         <div class="module-header">
           <div class="module-clipart"><i class="fa-solid fa-file-pdf"></i></div>
           <div class="module-title">
-            <h2>Organic Farming Library</h2>
-            <p>PDF Guides for Sustainable & Chemical-Free Agriculture</p>
+            <h2 data-i18n="organic.title">Organic Farming Library</h2>
+            <p data-i18n="organic.subtitle">PDF Guides for Sustainable & Chemical-Free Agriculture</p>
           </div>
         </div>
 
@@ -775,31 +778,31 @@
           </svg>
         </div>
 
-        <h2>Meet Sprout! 😉</h2>
-        <p>Your Intelligent Soil Companion & AI Earthworm</p>
+        <h2 data-i18n="sprout.title">Meet Sprout! 😉</h2>
+        <p data-i18n="sprout.subtitle">Your Intelligent Soil Companion & AI Earthworm</p>
 
         <div class="sprout-setup">
-          <label for="sprout-crop-select"><i class="fa-solid fa-seedling"></i> Which crop are you currently growing?</label>
+          <label for="sprout-crop-select"><i class="fa-solid fa-seedling"></i> <span data-i18n="sprout.cropLabel">Which crop are you currently growing?</span></label>
           <select id="sprout-crop-select" onchange="onActiveCropChange(this.value)">
-            <option value="">Select a crop to get live insights & alerts...</option>
+            <option value="" data-i18n="sprout.cropPlaceholder">Select a crop to get live insights & alerts...</option>
           </select>
         </div>
 
         <div class="sprout-insights" id="sprout-insights"></div>
 
         <div class="sprout-chat">
-          <h3><i class="fa-solid fa-comment-dots"></i> Ask Sprout</h3>
+          <h3><i class="fa-solid fa-comment-dots"></i> <span data-i18n="sprout.askTitle">Ask Sprout</span></h3>
           <div class="sprout-chat-suggestions">
-            <span class="chip-suggestion" onclick="sendSproutMessage('How is my farm doing?')">How is my farm doing?</span>
-            <span class="chip-suggestion" onclick="sendSproutMessage('What is the soil moisture?')">Soil moisture?</span>
-            <span class="chip-suggestion" onclick="sendSproutMessage('Any alerts right now?')">Any alerts?</span>
-            <span class="chip-suggestion" onclick="sendSproutMessage('Tips to improve my soil')">Tips to improve soil</span>
+            <span class="chip-suggestion" data-i18n="sprout.chip1" onclick="sendSproutMessage('How is my farm doing?')">How is my farm doing?</span>
+            <span class="chip-suggestion" data-i18n="sprout.chip2" onclick="sendSproutMessage('What is the soil moisture?')">Soil moisture?</span>
+            <span class="chip-suggestion" data-i18n="sprout.chip3" onclick="sendSproutMessage('Any alerts right now?')">Any alerts?</span>
+            <span class="chip-suggestion" data-i18n="sprout.chip4" onclick="sendSproutMessage('Tips to improve my soil')">Tips to improve soil</span>
           </div>
           <div class="sprout-chat-log" id="sprout-chat-log">
-            <div class="chat-msg bot">Hi, I'm Sprout 🪱 Pick your crop above and ask me anything about your live soil readings!</div>
+            <div class="chat-msg bot" id="sprout-greeting-msg" data-i18n="sprout.greeting">Hi, I'm Sprout 🪱 Pick your crop above and ask me anything about your live soil readings!</div>
           </div>
           <div class="sprout-chat-input-row">
-            <input type="text" id="sprout-chat-input" placeholder="Ask about temperature, moisture, pH..." onkeydown="if(event.key==='Enter') sendSproutMessage()" />
+            <input type="text" id="sprout-chat-input" placeholder="Ask about temperature, moisture, pH..." data-i18n-placeholder="sprout.chatPlaceholder" onkeydown="if(event.key==='Enter') sendSproutMessage()" />
             <button onclick="sendSproutMessage()"><i class="fa-solid fa-paper-plane"></i></button>
           </div>
         </div>
@@ -906,6 +909,108 @@
   </div>
 
   <script>
+    // ---- 0. Language toggle (English / Tamil) ----
+    // Pure client-side i18n: every static string carries a data-i18n key
+    // (or data-i18n-placeholder for inputs). Toggling swaps textContent from
+    // the TRANSLATIONS table and persists the choice so it survives reloads.
+    // Sprout AI is also told which language to reply in (see askSproutAI).
+    const TRANSLATIONS = {
+      en: {
+        'nav.admin': 'Admin',
+        'nav.logout': 'Logout',
+        'tab.farmvoice': 'FarmVoice',
+        'tab.plant': 'Plantcyclopedia',
+        'tab.organic': 'Organic Farming',
+        'tab.sprout': 'Sprout AI',
+        'farmvoice.title': 'FarmVoice Analytics',
+        'farmvoice.subtitle': '"Hear what your farm says"',
+        'time.1day': '1 Day',
+        'time.1week': '1 Week',
+        'time.1month': '1 Month',
+        'time.1year': '1 Year',
+        'telemetry.title': 'Live ESP32 Telemetry Records',
+        'telemetry.export': 'Export CSV',
+        'telemetry.fetching': 'Fetching historical records from ESP32...',
+        'plant.title': 'Plantcyclopedia',
+        'plant.subtitle': 'Crop Wisdom & Optimal Soil Conditions',
+        'organic.title': 'Organic Farming Library',
+        'organic.subtitle': 'PDF Guides for Sustainable & Chemical-Free Agriculture',
+        'sprout.title': 'Meet Sprout! 😉',
+        'sprout.subtitle': 'Your Intelligent Soil Companion & AI Earthworm',
+        'sprout.cropLabel': 'Which crop are you currently growing?',
+        'sprout.cropPlaceholder': 'Select a crop to get live insights & alerts...',
+        'sprout.askTitle': 'Ask Sprout',
+        'sprout.chip1': 'How is my farm doing?',
+        'sprout.chip2': 'Soil moisture?',
+        'sprout.chip3': 'Any alerts right now?',
+        'sprout.chip4': 'Tips to improve soil',
+        'sprout.greeting': "Hi, I'm Sprout 🪱 Pick your crop above and ask me anything about your live soil readings!",
+        'sprout.chatPlaceholder': 'Ask about temperature, moisture, pH...'
+      },
+      ta: {
+        'nav.admin': 'நிர்வாகி',
+        'nav.logout': 'வெளியேறு',
+        'tab.farmvoice': 'பண்ணை குரல்',
+        'tab.plant': 'தாவர களஞ்சியம்',
+        'tab.organic': 'இயற்கை விவசாயம்',
+        'tab.sprout': 'ஸ்ப்ரவுட் AI',
+        'farmvoice.title': 'பண்ணை குரல் பகுப்பாய்வு',
+        'farmvoice.subtitle': '"உங்கள் பண்ணை சொல்வதைக் கேளுங்கள்"',
+        'time.1day': '1 நாள்',
+        'time.1week': '1 வாரம்',
+        'time.1month': '1 மாதம்',
+        'time.1year': '1 வருடம்',
+        'telemetry.title': 'நேரடி ESP32 பதிவுகள்',
+        'telemetry.export': 'CSV ஏற்றுமதி',
+        'telemetry.fetching': 'ESP32 வரலாற்றுப் பதிவுகளை பெறுகிறது...',
+        'plant.title': 'தாவர களஞ்சியம்',
+        'plant.subtitle': 'பயிர் அறிவு & உகந்த மண் நிலைமைகள்',
+        'organic.title': 'இயற்கை விவசாய நூலகம்',
+        'organic.subtitle': 'நிலையான, ரசாயனமற்ற விவசாயத்திற்கான PDF வழிகாட்டிகள்',
+        'sprout.title': 'ஸ்ப்ரவுட்டை சந்திக்கவும்! 😉',
+        'sprout.subtitle': 'உங்கள் புத்திசாலி மண் தோழன் & AI மண்புழு',
+        'sprout.cropLabel': 'நீங்கள் தற்போது எந்த பயிரை வளர்க்கிறீர்கள்?',
+        'sprout.cropPlaceholder': 'நேரடி நுண்ணறிவு & எச்சரிக்கைகளுக்கு பயிரைத் தேர்ந்தெடுக்கவும்...',
+        'sprout.askTitle': 'ஸ்ப்ரவுட்டிடம் கேளுங்கள்',
+        'sprout.chip1': 'என் பண்ணை எப்படி இருக்கிறது?',
+        'sprout.chip2': 'மண் ஈரப்பதம்?',
+        'sprout.chip3': 'இப்போது ஏதேனும் எச்சரிக்கை உள்ளதா?',
+        'sprout.chip4': 'மண்ணை மேம்படுத்த குறிப்புகள்',
+        'sprout.greeting': 'வணக்கம், நான் ஸ்ப்ரவுட் 🪱 மேலே உங்கள் பயிரைத் தேர்ந்தெடுத்து, உங்கள் நேரடி மண் அளவீடுகள் பற்றி என்னிடம் கேளுங்கள்!',
+        'sprout.chatPlaceholder': 'வெப்பநிலை, ஈரப்பதம், pH பற்றி கேளுங்கள்...'
+      }
+    };
+
+    let currentLang = localStorage.getItem('ff_lang') || 'en';
+
+    function applyLanguage(lang) {
+      currentLang = lang;
+      const dict = TRANSLATIONS[lang] || TRANSLATIONS.en;
+
+      document.querySelectorAll('[data-i18n]').forEach((el) => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) el.textContent = dict[key];
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (dict[key]) el.placeholder = dict[key];
+      });
+
+      const label = document.getElementById('lang-toggle-label');
+      if (label) label.textContent = lang === 'en' ? 'தமிழ்' : 'English';
+      document.documentElement.setAttribute('lang', lang === 'ta' ? 'ta' : 'en');
+
+      localStorage.setItem('ff_lang', lang);
+    }
+
+    function toggleLanguage() {
+      applyLanguage(currentLang === 'en' ? 'ta' : 'en');
+    }
+
+    // Apply saved/default language once the DOM is parsed, before other
+    // init code (below) starts populating dynamic content.
+    document.addEventListener('DOMContentLoaded', () => applyLanguage(currentLang));
+
     // 1. Firebase Configuration
     // ⚠️ SECURITY: this config (including apiKey) is public in the shipped JS
     // by design — that's normal for Firebase web apps. What actually gates
@@ -2044,7 +2149,7 @@ Instructions:
 - If no excerpt covers the question, you may draw on general organic-farming knowledge, but make clear you're not quoting a specific guide.
 - Always favor organic, chemical-free recommendations, consistent with the app's focus.
 - If a sensor reading is out of range, proactively connect your advice to it.
-- Be concise, warm, and practical — this is a chat bubble on a phone. 3-5 sentences unless the farmer asks for a full plan.`;
+- Be concise, warm, and practical — this is a chat bubble on a phone. 3-5 sentences unless the farmer asks for a full plan.${currentLang === 'ta' ? '\n- The farmer has switched the app to Tamil. Reply ENTIRELY in Tamil (தமிழ்), using simple, everyday words a farmer would use. You may keep technical units (°C, %, pH, mg/kg) and crop names in Latin script if there is no common Tamil term.' : ''}`;
 
       // Calls our own Netlify Function (netlify/functions/sprout-ai.js) rather
       // than calling an AI API directly, so the API key stays server-side.
