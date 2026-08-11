@@ -1,5 +1,3 @@
-const fetch = require('node-fetch');
-
 exports.handler = async (event, context) => {
   // Only allow POST requests
   if (event.httpMethod !== 'POST') {
@@ -29,10 +27,11 @@ exports.handler = async (event, context) => {
     }
 
     // 4. Connect to the Google AI Studio REST API
-    // We are using gemini-1.5-flash here as it is highly recommended as a starting point
+    // Ensure you have GEMINI_API_KEY set in your Netlify Environment Variables
     const apiKey = process.env.GEMINI_API_KEY;
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
+    // Node 18+ on Netlify supports native fetch, so no external package is needed
     const response = await fetch(url, {
       method: 'POST',
       headers: {
