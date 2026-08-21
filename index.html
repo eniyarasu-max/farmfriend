@@ -18,16 +18,12 @@
   <link rel="apple-touch-icon" href="icon-192.png" />
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<<<<<<< HEAD
   <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-=======
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
 
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -384,7 +380,6 @@
     }
     .btn-export:hover { transform: translateY(-1px); background: rgba(74, 122, 99, 0.22); }
 
-<<<<<<< HEAD
     .btn-export-pdf {
       background: rgba(201, 102, 63, 0.14);
       color: var(--clay-deep);
@@ -481,42 +476,57 @@
     /* ---- Sensor sanity-check flag ---- */
     .sensor-error { color: var(--danger); font-weight: 700; }
 
-    .charts-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-top: 14px;
-    }
-    .metric-chart-card {
-      background: rgba(255, 255, 255, 0.5);
-      border: 1px solid rgba(74, 122, 99, 0.14);
-      border-radius: 16px;
-      padding: 12px 14px 14px;
-    }
-    .metric-chart-header {
+    .chart-interactive-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 10px;
+      gap: 10px;
+      margin-top: 14px;
+      margin-bottom: 12px;
       padding-bottom: 8px;
       border-bottom: 1px solid rgba(74, 122, 99, 0.12);
     }
-    .metric-chart-title {
+    .metric-pills-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .metric-pill {
       display: inline-flex;
       align-items: center;
-      gap: 7px;
-      font-size: 12.5px;
-      font-weight: 800;
-      color: var(--moss-deep);
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+      user-select: none;
+      background: rgba(255, 255, 255, 0.45);
+      color: var(--muted);
     }
-    .metric-chart-title .pill-dot {
-      width: 9px;
-      height: 9px;
+    .metric-pill .pill-dot {
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       display: inline-block;
     }
+    .metric-pill.active {
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    .metric-pill[data-dataset="0"].active { color: #1f7a6f; border-color: rgba(42, 157, 143, 0.4); }
+    .metric-pill[data-dataset="0"] .pill-dot { background: #2a9d8f; }
+    .metric-pill[data-dataset="1"].active { color: #b85c27; border-color: rgba(224, 122, 63, 0.4); }
+    .metric-pill[data-dataset="1"] .pill-dot { background: #e07a3f; }
+    .metric-pill[data-dataset="2"].active { color: #ad4c26; border-color: rgba(201, 102, 63, 0.4); }
+    .metric-pill[data-dataset="2"] .pill-dot { background: #c9663f; }
+    .metric-pill[data-dataset="3"].active { color: #2e688c; border-color: rgba(69, 123, 157, 0.4); }
+    .metric-pill[data-dataset="3"] .pill-dot { background: #457b9d; }
+
     .chart-tools-row {
       display: flex;
       align-items: center;
@@ -564,7 +574,7 @@
 
     .chart-container {
       position: relative;
-      height: 220px;
+      height: 320px;
       width: 100%;
       transition: all 0.3s ease;
     }
@@ -572,17 +582,17 @@
     /* Point Click Inspector Popup */
     .chart-point-inspector {
       position: absolute;
-      top: 10px;
-      right: 10px;
+      top: 14px;
+      right: 14px;
       background: rgba(47, 87, 68, 0.95);
       color: white;
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-      padding: 10px 12px;
+      padding: 12px 14px;
       border-radius: 14px;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
       z-index: 20;
-      max-width: 220px;
+      max-width: 280px;
       animation: cardIn 0.2s ease-out;
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
@@ -598,15 +608,19 @@
       letter-spacing: 0.5px;
     }
     .inspector-time { font-size: 13px; font-weight: 800; color: white; margin-bottom: 8px; }
-    .inspector-single-stat {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 6px 10px;
-      border-radius: 6px;
+    .inspector-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
       margin-bottom: 10px;
-      font-size: 15px;
-      font-weight: 800;
-      text-align: center;
+      font-size: 11.5px;
     }
+    .inspector-stat {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+    .inspector-stat-val { font-weight: 700; font-size: 12.5px; }
     .btn-ask-inspector {
       width: 100%;
       background: var(--sage);
@@ -641,13 +655,6 @@
       box-sizing: border-box;
       border-radius: 0;
     }
-    .metric-chart-card.card-fullscreen-active { z-index: 9999; }
-=======
-    /* ---- Sensor sanity-check flag ---- */
-    .sensor-error { color: var(--danger); font-weight: 700; }
-
-    .chart-container { position: relative; height: 300px; width: 100%; }
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
 
     .history-timeline { margin-top: 16px; max-height: 240px; overflow-y: auto; }
 
@@ -913,7 +920,6 @@
       0%, 100% { box-shadow: 0 0 0 0 rgba(231, 135, 107, 0.5); }
       50% { box-shadow: 0 0 0 8px rgba(231, 135, 107, 0); }
     }
-<<<<<<< HEAD
     .btn-attach {
       background: rgba(74,122,99,0.14) !important; color: var(--moss-deep) !important;
       padding: 0 14px !important; border: 1px solid rgba(74,122,99,0.3) !important;
@@ -979,8 +985,6 @@
       margin-bottom: 6px;
       border: 1px solid rgba(255, 255, 255, 0.4);
     }
-=======
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
     .btn-speaker {
       background: rgba(255,255,255,0.5); color: var(--muted);
       border: 1px solid rgba(74,122,99,0.25); border-radius: 10px;
@@ -1003,8 +1007,7 @@
       .nav-tabs { top: 58px; justify-content: flex-start; }
       .card { padding: 18px; border-radius: 18px; }
       .module-title h2 { font-size: 19px; }
-      .chart-container { height: 200px; }
-      .charts-grid { grid-template-columns: 1fr; }
+      .chart-container { height: 240px; }
       .metric-comparison { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
       .modal-content { padding: 20px; border-radius: 18px; }
     }
@@ -1024,18 +1027,12 @@
     </div>
     <div class="user-actions">
       <span id="user-display">Loading...</span>
-<<<<<<< HEAD
       <button class="btn-admin" id="pwa-install-btn" style="display:none;" onclick="triggerPwaInstall()" title="Install FarmFriend as an App">
         <i class="fa-solid fa-mobile-screen-button"></i> <span data-i18n="nav.install">Install App</span>
       </button>
       <button class="btn-admin" id="lang-toggle-btn" onclick="toggleLanguage()" title="Switch language / மொழியை மாற்று">
         <i class="fa-solid fa-language"></i> <span id="lang-toggle-label">தமிழ்</span>
       </button>
-=======
-      <button class="btn-admin" id="lang-toggle-btn" onclick="toggleLanguage()" title="Switch language / மொழியை மாற்று">
-        <i class="fa-solid fa-language"></i> <span id="lang-toggle-label">தமிழ்</span>
-      </button>
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
       <button class="btn-admin" id="admin-panel-btn" onclick="openAdminAuthModal()">
         <i class="fa-solid fa-user-gear"></i> <span data-i18n="nav.admin">Admin</span>
       </button>
@@ -1122,141 +1119,76 @@
           <!-- Live min/avg/max stat chips rendered dynamically -->
         </div>
 
-        <!-- Interactive Per-Metric Telemetry Charts -->
-        <div class="charts-grid" id="telemetry-charts-grid">
-          <div class="metric-chart-card" data-metric="moisture">
-            <div class="metric-chart-header">
-              <span class="metric-chart-title"><span class="pill-dot" style="background:#2a9d8f;"></span> <span data-i18n="chart.soilMoisture">Soil Moisture</span></span>
-              <div class="chart-tools-row">
-                <label class="target-zone-toggle" title="Show/hide optimal range for selected crop">
-                  <input type="checkbox" checked onchange="toggleTargetRange('moisture', this.checked)">
-                  <span data-i18n="chart.targetZone">🎯 Safe Zone</span>
-                </label>
-                <button type="button" class="chart-tool-btn" onclick="cycleChartType('moisture')" title="Switch chart style (Area / Line / Bar)">
-                  <i class="fa-solid fa-chart-area"></i> <span class="chart-type-label">Area</span>
-                </button>
-                <button type="button" class="chart-tool-btn" onclick="zoomChart('moisture', 1.2)" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
-                <button type="button" class="chart-tool-btn" onclick="zoomChart('moisture', 0.8)" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
-                <button type="button" class="chart-tool-btn" onclick="resetChartZoom('moisture')" title="Reset Zoom View"><i class="fa-solid fa-rotate-left"></i></button>
-                <button type="button" class="chart-tool-btn" onclick="toggleChartFullscreen('moisture')" title="Full Screen Expand"><i class="fa-solid fa-expand"></i></button>
-              </div>
-            </div>
-            <div class="chart-container" id="chart-container-moisture">
-              <div class="chart-point-inspector" id="chart-point-inspector-moisture" style="display:none;">
-                <div class="inspector-header"><span>Telemetry Snapshot</span><span style="cursor:pointer; font-size:14px;" onclick="closePointInspector('moisture')">&times;</span></div>
-                <div class="inspector-time" id="inspector-time-moisture">--:--</div>
-                <div class="inspector-single-stat" id="insp-val-moisture">--</div>
-                <button type="button" class="btn-ask-inspector" onclick="askSproutAboutPoint('moisture')">
-                  <i class="fa-solid fa-comment-dots"></i> <span data-i18n="chart.askSproutPoint">Ask Sprout About This</span>
-                </button>
-              </div>
-              <canvas id="farmVoiceChart-moisture"></canvas>
-            </div>
+        <!-- Interactive Metric Filters & Controls Toolbar -->
+        <div class="chart-interactive-header">
+          <div class="metric-pills-row" id="metric-pills">
+            <span class="metric-pill active" data-dataset="0" onclick="toggleMetricDataset(0, this)">
+              <span class="pill-dot"></span> <span data-i18n="chart.soilMoisture">Soil Moisture</span>
+            </span>
+            <span class="metric-pill active" data-dataset="1" onclick="toggleMetricDataset(1, this)">
+              <span class="pill-dot"></span> <span data-i18n="chart.soilPh">Soil pH</span>
+            </span>
+            <span class="metric-pill active" data-dataset="2" onclick="toggleMetricDataset(2, this)">
+              <span class="pill-dot"></span> <span data-i18n="chart.temp">Temperature</span>
+            </span>
+            <span class="metric-pill active" data-dataset="3" onclick="toggleMetricDataset(3, this)">
+              <span class="pill-dot"></span> <span data-i18n="chart.humidity">Humidity</span>
+            </span>
           </div>
 
-          <div class="metric-chart-card" data-metric="ph">
-            <div class="metric-chart-header">
-              <span class="metric-chart-title"><span class="pill-dot" style="background:#e07a3f;"></span> <span data-i18n="chart.soilPh">Soil pH</span></span>
-              <div class="chart-tools-row">
-                <label class="target-zone-toggle" title="Show/hide optimal range for selected crop">
-                  <input type="checkbox" checked onchange="toggleTargetRange('ph', this.checked)">
-                  <span data-i18n="chart.targetZone">🎯 Safe Zone</span>
-                </label>
-                <button type="button" class="chart-tool-btn" onclick="cycleChartType('ph')" title="Switch chart style (Area / Line / Bar)">
-                  <i class="fa-solid fa-chart-area"></i> <span class="chart-type-label">Area</span>
-                </button>
-                <button type="button" class="chart-tool-btn" onclick="zoomChart('ph', 1.2)" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
-                <button type="button" class="chart-tool-btn" onclick="zoomChart('ph', 0.8)" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
-                <button type="button" class="chart-tool-btn" onclick="resetChartZoom('ph')" title="Reset Zoom View"><i class="fa-solid fa-rotate-left"></i></button>
-                <button type="button" class="chart-tool-btn" onclick="toggleChartFullscreen('ph')" title="Full Screen Expand"><i class="fa-solid fa-expand"></i></button>
-              </div>
+          <div class="chart-tools-row">
+            <label class="target-zone-toggle" title="Show/hide optimal range for selected crop">
+              <input type="checkbox" id="toggle-target-range" checked onchange="toggleTargetRange(this.checked)">
+              <span data-i18n="chart.targetZone">🎯 Safe Zone</span>
+            </label>
+            <button type="button" class="chart-tool-btn" id="btn-chart-type" onclick="cycleChartType()" title="Switch chart style (Area / Line / Bar)">
+              <i class="fa-solid fa-chart-area"></i> <span id="chart-type-label">Area</span>
+            </button>
+            <button type="button" class="chart-tool-btn" onclick="zoomChart(1.2)" title="Zoom In">
+              <i class="fa-solid fa-magnifying-glass-plus"></i>
+            </button>
+            <button type="button" class="chart-tool-btn" onclick="zoomChart(0.8)" title="Zoom Out">
+              <i class="fa-solid fa-magnifying-glass-minus"></i>
+            </button>
+            <button type="button" class="chart-tool-btn" onclick="resetChartZoom()" title="Reset Zoom View">
+              <i class="fa-solid fa-rotate-left"></i>
+            </button>
+            <button type="button" class="chart-tool-btn" id="btn-chart-fullscreen" onclick="toggleChartFullscreen()" title="Full Screen Expand">
+              <i class="fa-solid fa-expand" id="fullscreen-icon"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="chart-container" id="farmVoiceChartContainer">
+          <!-- Floating Point Inspector Popup -->
+          <div class="chart-point-inspector" id="chart-point-inspector" style="display:none;">
+            <div class="inspector-header">
+              <span>Telemetry Snapshot</span>
+              <span style="cursor:pointer; font-size:14px;" onclick="closePointInspector()">&times;</span>
             </div>
-            <div class="chart-container" id="chart-container-ph">
-              <div class="chart-point-inspector" id="chart-point-inspector-ph" style="display:none;">
-                <div class="inspector-header"><span>Telemetry Snapshot</span><span style="cursor:pointer; font-size:14px;" onclick="closePointInspector('ph')">&times;</span></div>
-                <div class="inspector-time" id="inspector-time-ph">--:--</div>
-                <div class="inspector-single-stat" id="insp-val-ph">--</div>
-                <button type="button" class="btn-ask-inspector" onclick="askSproutAboutPoint('ph')">
-                  <i class="fa-solid fa-comment-dots"></i> <span data-i18n="chart.askSproutPoint">Ask Sprout About This</span>
-                </button>
-              </div>
-              <canvas id="farmVoiceChart-ph"></canvas>
+            <div class="inspector-time" id="inspector-time">--:--</div>
+            <div class="inspector-grid">
+              <div class="inspector-stat">💧 Moist: <span class="inspector-stat-val" id="insp-moist">--</span></div>
+              <div class="inspector-stat">🧪 pH: <span class="inspector-stat-val" id="insp-ph">--</span></div>
+              <div class="inspector-stat">🌡️ Temp: <span class="inspector-stat-val" id="insp-temp">--</span></div>
+              <div class="inspector-stat">💨 Hum: <span class="inspector-stat-val" id="insp-hum">--</span></div>
             </div>
+            <button type="button" class="btn-ask-inspector" onclick="askSproutAboutSelectedPoint()">
+              <i class="fa-solid fa-comment-dots"></i> <span data-i18n="chart.askSproutPoint">Ask Sprout About This</span>
+            </button>
           </div>
 
-          <div class="metric-chart-card" data-metric="temp">
-            <div class="metric-chart-header">
-              <span class="metric-chart-title"><span class="pill-dot" style="background:#c9663f;"></span> <span data-i18n="chart.temp">Temperature</span></span>
-              <div class="chart-tools-row">
-                <label class="target-zone-toggle" title="Show/hide optimal range for selected crop">
-                  <input type="checkbox" checked onchange="toggleTargetRange('temp', this.checked)">
-                  <span data-i18n="chart.targetZone">🎯 Safe Zone</span>
-                </label>
-                <button type="button" class="chart-tool-btn" onclick="cycleChartType('temp')" title="Switch chart style (Area / Line / Bar)">
-                  <i class="fa-solid fa-chart-area"></i> <span class="chart-type-label">Area</span>
-                </button>
-                <button type="button" class="chart-tool-btn" onclick="zoomChart('temp', 1.2)" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
-                <button type="button" class="chart-tool-btn" onclick="zoomChart('temp', 0.8)" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
-                <button type="button" class="chart-tool-btn" onclick="resetChartZoom('temp')" title="Reset Zoom View"><i class="fa-solid fa-rotate-left"></i></button>
-                <button type="button" class="chart-tool-btn" onclick="toggleChartFullscreen('temp')" title="Full Screen Expand"><i class="fa-solid fa-expand"></i></button>
-              </div>
-            </div>
-            <div class="chart-container" id="chart-container-temp">
-              <div class="chart-point-inspector" id="chart-point-inspector-temp" style="display:none;">
-                <div class="inspector-header"><span>Telemetry Snapshot</span><span style="cursor:pointer; font-size:14px;" onclick="closePointInspector('temp')">&times;</span></div>
-                <div class="inspector-time" id="inspector-time-temp">--:--</div>
-                <div class="inspector-single-stat" id="insp-val-temp">--</div>
-                <button type="button" class="btn-ask-inspector" onclick="askSproutAboutPoint('temp')">
-                  <i class="fa-solid fa-comment-dots"></i> <span data-i18n="chart.askSproutPoint">Ask Sprout About This</span>
-                </button>
-              </div>
-              <canvas id="farmVoiceChart-temp"></canvas>
-            </div>
-          </div>
-
-          <div class="metric-chart-card" data-metric="humidity">
-            <div class="metric-chart-header">
-              <span class="metric-chart-title"><span class="pill-dot" style="background:#457b9d;"></span> <span data-i18n="chart.humidity">Humidity</span></span>
-              <div class="chart-tools-row">
-                <label class="target-zone-toggle" title="Show/hide optimal range for selected crop">
-                  <input type="checkbox" checked onchange="toggleTargetRange('humidity', this.checked)">
-                  <span data-i18n="chart.targetZone">🎯 Safe Zone</span>
-                </label>
-                <button type="button" class="chart-tool-btn" onclick="cycleChartType('humidity')" title="Switch chart style (Area / Line / Bar)">
-                  <i class="fa-solid fa-chart-area"></i> <span class="chart-type-label">Area</span>
-                </button>
-                <button type="button" class="chart-tool-btn" onclick="zoomChart('humidity', 1.2)" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
-                <button type="button" class="chart-tool-btn" onclick="zoomChart('humidity', 0.8)" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
-                <button type="button" class="chart-tool-btn" onclick="resetChartZoom('humidity')" title="Reset Zoom View"><i class="fa-solid fa-rotate-left"></i></button>
-                <button type="button" class="chart-tool-btn" onclick="toggleChartFullscreen('humidity')" title="Full Screen Expand"><i class="fa-solid fa-expand"></i></button>
-              </div>
-            </div>
-            <div class="chart-container" id="chart-container-humidity">
-              <div class="chart-point-inspector" id="chart-point-inspector-humidity" style="display:none;">
-                <div class="inspector-header"><span>Telemetry Snapshot</span><span style="cursor:pointer; font-size:14px;" onclick="closePointInspector('humidity')">&times;</span></div>
-                <div class="inspector-time" id="inspector-time-humidity">--:--</div>
-                <div class="inspector-single-stat" id="insp-val-humidity">--</div>
-                <button type="button" class="btn-ask-inspector" onclick="askSproutAboutPoint('humidity')">
-                  <i class="fa-solid fa-comment-dots"></i> <span data-i18n="chart.askSproutPoint">Ask Sprout About This</span>
-                </button>
-              </div>
-              <canvas id="farmVoiceChart-humidity"></canvas>
-            </div>
-          </div>
+          <canvas id="farmVoiceChart"></canvas>
         </div>
       </div>
 
       <div class="card glass">
         <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom: 12px;">
           <h3 style="margin-bottom:0;"><i class="fa-solid fa-clock-rotate-left"></i> <span data-i18n="telemetry.title">Live ESP32 Telemetry Records</span></h3>
-<<<<<<< HEAD
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="btn-export" onclick="exportHistoryCSV()"><i class="fa-solid fa-file-csv"></i> <span data-i18n="telemetry.export">Export CSV</span></button>
             <button class="btn-export btn-export-pdf" onclick="generateSoilHealthPDF()"><i class="fa-solid fa-file-pdf"></i> <span data-i18n="telemetry.exportPdf">Export Soil Report (PDF)</span></button>
           </div>
-=======
-          <button class="btn-export" onclick="exportHistoryCSV()"><i class="fa-solid fa-file-csv"></i> <span data-i18n="telemetry.export">Export CSV</span></button>
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
         </div>
         <div id="history-timeline" class="history-timeline">
           <p style="color: var(--muted);" data-i18n="telemetry.fetching">Fetching historical records from ESP32...</p>
@@ -1357,15 +1289,11 @@
           </div>
 
           <div class="sprout-chat-input-row">
-<<<<<<< HEAD
             <input type="file" id="leaf-camera-input" accept="image/*" capture="environment" style="display:none;" onchange="handleLeafImageSelected(event)" />
             <button type="button" class="btn-attach" id="sprout-camera-btn" onclick="triggerCameraInput()" title="Take Photo or Scan Leaf Disease">
               <i class="fa-solid fa-camera"></i>
             </button>
             <input type="text" id="sprout-chat-input" placeholder="Ask about temperature, moisture, pH, or leaf pests..." data-i18n-placeholder="sprout.chatPlaceholder" onkeydown="if(event.key==='Enter') sendSproutMessage()" />
-=======
-            <input type="text" id="sprout-chat-input" placeholder="Ask about temperature, moisture, pH..." data-i18n-placeholder="sprout.chatPlaceholder" onkeydown="if(event.key==='Enter') sendSproutMessage()" />
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
             <button type="button" class="btn-mic" id="sprout-mic-btn" onclick="toggleVoiceInput()" title="Speak your question">
               <i class="fa-solid fa-microphone"></i>
             </button>
@@ -1482,10 +1410,7 @@
     // Sprout AI is also told which language to reply in (see askSproutAI).
     const TRANSLATIONS = {
       en: {
-<<<<<<< HEAD
         'nav.install': 'Install App',
-=======
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
         'nav.admin': 'Admin',
         'nav.logout': 'Logout',
         'tab.farmvoice': 'FarmVoice',
@@ -1500,7 +1425,6 @@
         'time.1year': '1 Year',
         'telemetry.title': 'Live ESP32 Telemetry Records',
         'telemetry.export': 'Export CSV',
-<<<<<<< HEAD
         'telemetry.exportPdf': 'Export Soil Report (PDF)',
         'telemetry.fetching': 'Fetching historical records from ESP32...',
         'weather.title': 'Live Weather & Smart Irrigation',
@@ -1508,9 +1432,6 @@
         'weather.humidity': 'Humidity',
         'weather.wind': 'Wind Speed',
         'weather.loading': 'Fetching localized farm weather...',
-=======
-        'telemetry.fetching': 'Fetching historical records from ESP32...',
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
         'plant.title': 'Plantcyclopedia',
         'plant.subtitle': 'Crop Wisdom & Optimal Soil Conditions',
         'organic.title': 'Organic Farming Library',
@@ -1525,19 +1446,12 @@
         'sprout.chip3': 'Any alerts right now?',
         'sprout.chip4': 'Tips to improve soil',
         'sprout.chip5': 'Any unusual trends?',
-<<<<<<< HEAD
         'sprout.greeting': "Hi, I'm Sprout 🪱 Pick your crop above, ask me anything, or tap 📷 to scan a leaf photo!",
         'sprout.leafReady': '📸 Leaf photo attached for AI disease diagnosis',
         'sprout.chatPlaceholder': 'Ask about temperature, moisture, pH, or leaf pests...'
       },
       ta: {
         'nav.install': 'செயலியை நிறுவு',
-=======
-        'sprout.greeting': "Hi, I'm Sprout 🪱 Pick your crop above and ask me anything about your live soil readings!",
-        'sprout.chatPlaceholder': 'Ask about temperature, moisture, pH...'
-      },
-      ta: {
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
         'nav.admin': 'நிர்வாகி',
         'nav.logout': 'வெளியேறு',
         'tab.farmvoice': 'பண்ணை குரல்',
@@ -1552,7 +1466,6 @@
         'time.1year': '1 வருடம்',
         'telemetry.title': 'நேரடி ESP32 பதிவுகள்',
         'telemetry.export': 'CSV ஏற்றுமதி',
-<<<<<<< HEAD
         'telemetry.exportPdf': 'மண் அறிக்கை (PDF)',
         'telemetry.fetching': 'ESP32 வரலாற்றுப் பதிவுகளை பெறுகிறது...',
         'weather.title': 'நேரடி வானிலை & நுண்ணறிவு பாசனம்',
@@ -1560,9 +1473,6 @@
         'weather.humidity': 'ஈரப்பதம்',
         'weather.wind': 'காற்று வேகம்',
         'weather.loading': 'உள்ளூர் பண்ணை வானிலையைப் பெறுகிறது...',
-=======
-        'telemetry.fetching': 'ESP32 வரலாற்றுப் பதிவுகளை பெறுகிறது...',
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
         'plant.title': 'தாவர களஞ்சியம்',
         'plant.subtitle': 'பயிர் அறிவு & உகந்த மண் நிலைமைகள்',
         'organic.title': 'இயற்கை விவசாய நூலகம்',
@@ -1577,14 +1487,9 @@
         'sprout.chip3': 'இப்போது ஏதேனும் எச்சரிக்கை உள்ளதா?',
         'sprout.chip4': 'மண்ணை மேம்படுத்த குறிப்புகள்',
         'sprout.chip5': 'சமீபத்தில் ஏதேனும் மாற்றங்கள்?',
-<<<<<<< HEAD
         'sprout.greeting': 'வணக்கம், நான் ஸ்ப்ரவுட் 🪱 மேலே உங்கள் பயிரைத் தேர்ந்தெடுத்து, உங்கள் சந்தேகங்களைக் கேளுங்கள் அல்லது 📷 இலை புகைப்படத்தை ஸ்கேன் செய்யுங்கள்!',
         'sprout.leafReady': '📸 இலை புகைப்படம் AI நோயறிதலுக்கு தயாராக உள்ளது',
         'sprout.chatPlaceholder': 'வெப்பநிலை, ஈரப்பதம், pH அல்லது இலை பூச்சிகள் பற்றி கேளுங்கள்...'
-=======
-        'sprout.greeting': 'வணக்கம், நான் ஸ்ப்ரவுட் 🪱 மேலே உங்கள் பயிரைத் தேர்ந்தெடுத்து, உங்கள் நேரடி மண் அளவீடுகள் பற்றி என்னிடம் கேளுங்கள்!',
-        'sprout.chatPlaceholder': 'வெப்பநிலை, ஈரப்பதம், pH பற்றி கேளுங்கள்...'
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
       }
     };
 
@@ -1608,12 +1513,9 @@
       document.documentElement.setAttribute('lang', lang === 'ta' ? 'ta' : 'en');
 
       localStorage.setItem('ff_lang', lang);
-<<<<<<< HEAD
       if (typeof renderWeatherUI === 'function') {
         renderWeatherUI();
       }
-=======
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
     }
 
     function toggleLanguage() {
@@ -1683,6 +1585,7 @@
     let loadedPdfs = {};
     let historyDataStore = [];
     let isAdminAuthenticated = false;
+    let farmChart = null;
     let currentFilter = '1day';
 
     // ---- Optimum-range Alerts + Sprout AI state ----
@@ -1720,19 +1623,12 @@
       initChart();
       fetchHistoryData();
       listenToActiveCrop();
-<<<<<<< HEAD
       fetchWeatherData();
 
       // Re-check staleness every 30s
       setInterval(updateConnectionBadge, 30 * 1000);
       // Refresh weather every 15 minutes
       setInterval(fetchWeatherData, 15 * 60 * 1000);
-=======
-
-      // Re-check staleness every 30s even if no new Firebase event fires —
-      // an ESP32 that's gone silent won't trigger a 'value' update on its own.
-      setInterval(updateConnectionBadge, 30 * 1000);
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
     }
 
     // Modal Helpers
@@ -2082,30 +1978,28 @@
       document.getElementById('plant-modal').style.display = 'flex';
     }
 
-    // ---- Interactive per-metric telemetry chart state ----------------------
-    // Each metric (moisture / pH / temp / humidity) gets its own Chart.js
-    // instance, its own view-style (area/line/bar), its own zoom state, and
-    // its own point inspector — all keyed by metric id so one set of
-    // functions drives all four charts.
-    const METRIC_META = {
-      moisture: { label: 'Soil Moisture (%)', color: '#2a9d8f', bg: 'rgba(42, 157, 143, 0.12)', plantField: 'moisture', field: 'moisture', decimals: 1, unit: '%' },
-      ph:       { label: 'Soil pH',            color: '#e07a3f', bg: 'rgba(224, 122, 63, 0.1)',  plantField: 'ph',       field: 'ph',       decimals: 2, unit: '' },
-      temp:     { label: 'Temperature (°C)',   color: '#c9663f', bg: 'rgba(201, 102, 63, 0.1)',  plantField: 'temp',     field: 'temp',     decimals: 1, unit: '°C' },
-      humidity: { label: 'Humidity (%)',       color: '#457b9d', bg: 'rgba(69, 123, 157, 0.12)', plantField: null,      field: 'humidity', decimals: 1, unit: '%' }
-    };
-    const METRIC_KEYS = ['moisture', 'ph', 'temp', 'humidity'];
+    // ---- Interactive telemetry chart state ---------------------------------
+    // Which chart "view style" is currently active: area (default smooth
+    // gradient fill), line (crisp, no fill), or bar. Chart.js needs a full
+    // rebuild (not just an options mutation) to swap between line/bar
+    // rendering cleanly, so we track this and reuse buildChartConfig().
+    let currentChartType = 'area';
+    // The most recently clicked/tapped data point index, kept around so the
+    // "Ask Sprout About This" button knows which reading to hand off.
+    let selectedPointIndex = null;
+    let selectedPointLabel = null;
 
-    const metricCharts = {};   // { moisture: ChartInstance, ph: ChartInstance, ... }
-    const metricChartType = { moisture: 'area', ph: 'area', temp: 'area', humidity: 'area' };
-    const selectedPoint = { moisture: null, ph: null, temp: null, humidity: null }; // { index, label }
-    let lastBucketed = null;
+    const METRIC_DATASET_META = [
+      { key: 'moisture', label: 'Soil Moisture (%)', color: '#2a9d8f', bg: 'rgba(42, 157, 143, 0.12)', axis: 'y' },
+      { key: 'ph', label: 'Soil pH', color: '#e07a3f', bg: 'rgba(224, 122, 63, 0.1)', axis: 'y1' },
+      { key: 'temp', label: 'Temperature (°C)', color: '#c9663f', bg: 'rgba(201, 102, 63, 0.1)', axis: 'y1' },
+      { key: 'humidity', label: 'Humidity (%)', color: '#457b9d', bg: 'rgba(69, 123, 157, 0.12)', axis: 'y' }
+    ];
 
-    function buildMetricDataset(key) {
-      const m = METRIC_META[key];
-      const type = metricChartType[key];
-      const isBar = type === 'bar';
-      const isArea = type === 'area';
-      return {
+    function buildChartDatasets() {
+      const isBar = currentChartType === 'bar';
+      const isArea = currentChartType === 'area';
+      return METRIC_DATASET_META.map((m, i) => ({
         label: m.label,
         data: [],
         borderColor: m.color,
@@ -2115,30 +2009,30 @@
         pointRadius: isBar ? 0 : 2,
         pointHoverRadius: 5,
         borderWidth: isBar ? 0 : 2,
-        borderRadius: isBar ? 4 : 0
-      };
+        borderRadius: isBar ? 4 : 0,
+        yAxisID: m.axis,
+        hidden: farmChart ? farmChart.data.datasets[i]?.hidden : false
+      }));
     }
 
-    // (Re)builds a single metric's Chart.js instance. Called on first load
-    // and whenever that metric's view-style (area/line/bar) is switched,
-    // since Chart.js needs a fresh instance to swap between line and bar
-    // rendering cleanly.
-    function initMetricChart(key) {
-      const canvas = document.getElementById('farmVoiceChart-' + key);
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (metricCharts[key]) metricCharts[key].destroy();
+    // Initialize (or fully rebuild, e.g. on chart-type switch) Chart.js
+    function initChart() {
+      const ctx = document.getElementById('farmVoiceChart').getContext('2d');
+      if (farmChart) { farmChart.destroy(); }
 
-      metricCharts[key] = new Chart(ctx, {
-        type: metricChartType[key] === 'bar' ? 'bar' : 'line',
-        data: { labels: [], datasets: [buildMetricDataset(key)] },
+      farmChart = new Chart(ctx, {
+        type: currentChartType === 'bar' ? 'bar' : 'line',
+        data: {
+          labels: [],
+          datasets: buildChartDatasets()
+        },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
-          onClick: (evt, elements) => handleChartPointClick(key, evt, elements),
+          onClick: handleChartPointClick,
           plugins: {
-            legend: { display: false },
+            legend: { position: 'top', labels: { font: { family: 'Manrope' }, usePointStyle: true } },
             tooltip: { backgroundColor: '#2f5744', titleFont: { family: 'Manrope' }, bodyFont: { family: 'Manrope' } },
             annotation: { annotations: {} },
             zoom: {
@@ -2152,28 +2046,28 @@
             }
           },
           scales: {
-            x: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 10.5 } } },
+            x: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 11 } } },
             y: {
               beginAtZero: false,
-              title: { display: true, text: METRIC_META[key].label, font: { family: 'Manrope', size: 10.5 } },
+              position: 'left',
+              title: { display: true, text: 'Moisture / Humidity (%)', font: { family: 'Manrope', size: 11 } },
               grid: { color: 'rgba(74,122,99,0.08)' }
+            },
+            y1: {
+              beginAtZero: false,
+              position: 'right',
+              title: { display: true, text: 'pH  /  °C', font: { family: 'Manrope', size: 11 } },
+              grid: { display: false }
             }
           }
         }
       });
 
-      closePointInspector(key);
+      closePointInspector();
+      applyAxisVisibility();
+      updateTargetZoneAnnotations();
     }
 
-<<<<<<< HEAD
-    function initAllCharts() {
-      METRIC_KEYS.forEach(initMetricChart);
-    }
-    // Alias so the existing initDashboard() call site (initChart()) keeps working.
-    function initChart() { initAllCharts(); }
-
-=======
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
     // ---- Sensor sanity-checking -------------------------------------------
     // A flaky sensor or loose wire tends to report physically-impossible
     // values (pH of 0 or 9999, negative soil moisture, etc.) rather than just
@@ -2193,7 +2087,6 @@
       potassium: { min: 0, max: 2000 }      // mg/kg
     };
 
-<<<<<<< HEAD
     // Decodes Firebase push IDs (e.g. -O4abc...) to obtain the generation timestamp
     function decodePushIdTimestamp(id) {
       if (!id || typeof id !== 'string' || id.length < 8 || !id.startsWith('-')) return null;
@@ -2262,35 +2155,22 @@
       }
 
       // Check bounds & record sensor errors
-=======
-    function sanitizeReading(item) {
-      if (!item) return item;
-      const clean = { ...item };
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
       const errors = [];
       Object.keys(SENSOR_BOUNDS).forEach((field) => {
         const bound = SENSOR_BOUNDS[field];
         const value = clean[field];
-<<<<<<< HEAD
         if (typeof value === 'number' && (value < bound.min || value > bound.max)) {
-=======
-        if (typeof value === 'number' && (Number.isNaN(value) || value < bound.min || value > bound.max)) {
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
           errors.push(field);
           delete clean[field];
         }
       });
       if (errors.length) clean._sensorErrors = errors;
-<<<<<<< HEAD
 
       const hasAnyMetric = typeof clean.temperature === 'number' ||
                            typeof clean.humidity === 'number' ||
                            typeof clean.soilPercent === 'number' ||
                            typeof clean.phValue === 'number';
       return hasAnyMetric ? clean : null;
-=======
-      return clean;
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
     }
 
     // Formats a single field for display, distinguishing "sensor error"
@@ -2303,35 +2183,15 @@
       return typeof item[field] === 'number' ? item[field].toFixed(decimals) + unit : '--';
     }
 
-<<<<<<< HEAD
     // Real-Time ESP32 Listener: listens to /sensor_data/history and /sensor_data
-=======
-    // Real-Time ESP32 Listener directly reading keys: humidity, phValue, soilPercent, temperature
-    // Pulls a larger window so the 1-week / 1-month / 1-year filters have real
-    // historical spread to aggregate over, instead of just re-slicing the same
-    // handful of latest records.
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
     function fetchHistoryData() {
       const historyRef = db.ref('/sensor_data/history').limitToLast(1000);
       const rootSensorRef = db.ref('/sensor_data');
       const timeline = document.getElementById('history-timeline');
 
-<<<<<<< HEAD
       const processData = (items) => {
         lastFirebaseReceiveTime = Date.now();
         if (items && items.length > 0) {
-=======
-      historyRef.on('value', (snapshot) => {
-        const data = snapshot.val();
-        historyDataStore = [];
-        timeline.innerHTML = "";
-
-        if (data) {
-          const items = [];
-          Object.keys(data).forEach(key => {
-            items.push(sanitizeReading(data[key]));
-          });
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
           historyDataStore = items;
 
           // Render live item log (most recent 30 entries, newest first)
@@ -2355,7 +2215,6 @@
 
         checkAlerts();
         updateConnectionBadge();
-<<<<<<< HEAD
       };
 
       historyRef.on('value', (snapshot) => {
@@ -2402,20 +2261,10 @@
           }
           processData(items);
         });
-=======
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
       });
     }
 
     // ---- "Is my ESP32 online?" badge ---------------------------------------
-<<<<<<< HEAD
-=======
-    // Compares the latest reading's timestamp against the current time so a
-    // disconnected device doesn't just silently keep showing its last reading
-    // with no indication it's stale. Re-checked on a timer too, since a
-    // device that goes quiet won't fire a new Firebase 'value' event to
-    // trigger a re-render on its own.
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
     const STALE_AFTER_MS = 2 * 60 * 1000; // consider offline after 2 min of silence
 
     function updateConnectionBadge() {
@@ -2424,17 +2273,12 @@
       if (!badge || !text) return;
 
       const reading = getLatestReading();
-<<<<<<< HEAD
       if (!reading || historyDataStore.length === 0) {
-=======
-      if (!reading || typeof reading.timestamp !== 'number') {
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
         badge.className = 'connection-badge stale';
         text.textContent = 'No data yet';
         return;
       }
 
-<<<<<<< HEAD
       const readingTime = typeof reading.timestamp === 'number' ? reading.timestamp : lastFirebaseReceiveTime;
       if (!readingTime) {
         badge.className = 'connection-badge live';
@@ -2443,9 +2287,6 @@
       }
 
       const ageMs = Date.now() - readingTime;
-=======
-      const ageMs = Date.now() - reading.timestamp;
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
       if (ageMs < STALE_AFTER_MS) {
         badge.className = 'connection-badge live';
         text.textContent = 'Live';
@@ -2496,7 +2337,6 @@
       URL.revokeObjectURL(url);
     }
 
-<<<<<<< HEAD
     // ---- Soil Health & Telemetry PDF Report Export ---------------------------
     function generateSoilHealthPDF() {
       if (!window.jspdf || !window.jspdf.jsPDF) {
@@ -2837,8 +2677,6 @@
       if (advTextEl) advTextEl.textContent = advisoryMsg;
     }
 
-=======
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
     // Returns the most recent sensor reading object, or null if none logged yet.
     function getLatestReading() {
       if (!historyDataStore.length) return null;
@@ -3016,27 +2854,26 @@
     }
 
     // Chart Update Function
-    function updateAllCharts(filter) {
-      if (historyDataStore.length === 0) return;
+    let lastBucketed = null;
+    function updateChartGraph(filter) {
+      if (!farmChart || historyDataStore.length === 0) return;
       currentFilter = filter;
 
       const bucketed = bucketHistory(filter);
       lastBucketed = bucketed;
 
-      METRIC_KEYS.forEach((key) => {
-        const chart = metricCharts[key];
-        if (!chart) return;
-        chart.data.labels = bucketed.labels;
-        chart.data.datasets[0].data = bucketed[METRIC_META[key].field];
-        chart.update();
-        closePointInspector(key);
-        updateTargetZoneAnnotations(key);
-      });
+      farmChart.data.labels = bucketed.labels;
+      farmChart.data.datasets[0].data = bucketed.moisture;
+      farmChart.data.datasets[1].data = bucketed.ph;
+      farmChart.data.datasets[2].data = bucketed.temp;
+      farmChart.data.datasets[3].data = bucketed.humidity;
+      farmChart.update();
 
+      closePointInspector();
+      applyAxisVisibility();
+      updateTargetZoneAnnotations();
       renderStatChips(bucketed.raw);
     }
-    // Alias for existing call sites.
-    function updateChartGraph(filter) { updateAllCharts(filter); }
 
     function updateTimeFilter(filter, btn) {
       document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
@@ -3044,177 +2881,227 @@
       updateChartGraph(filter);
     }
 
-    // ---- Active-crop optimal safe-zone shading ------------------------------
-    // Draws a soft shaded band + dashed threshold lines on a metric's chart
-    // when that metric has a known optimum range for the active crop
-    // (humidity has no stored optimum band yet). Controlled by that chart's
-    // own "🎯 Safe Zone" toggle switch.
-    function toggleTargetRange(key, checked) {
-      updateTargetZoneAnnotations(key, checked);
+    // ---- Metric toggle pills -------------------------------------------
+    // Shows/hides a dataset and, when the farmer isolates a single metric,
+    // tightens that metric's Y-axis to its own data range instead of the
+    // shared default scale, and hides the now-irrelevant axis entirely.
+    function toggleMetricDataset(index, el) {
+      if (!farmChart) return;
+      const meta = farmChart.getDatasetMeta(index);
+      const willBeHidden = !meta.hidden ? true : false;
+      meta.hidden = willBeHidden;
+      farmChart.data.datasets[index].hidden = willBeHidden;
+      el.classList.toggle('active', !willBeHidden);
+      farmChart.update();
+      applyAxisVisibility();
+      updateTargetZoneAnnotations();
     }
 
-    function updateTargetZoneAnnotations(key, forceShow) {
-      const chart = metricCharts[key];
-      if (!chart) return;
-      const card = document.querySelector(`.metric-chart-card[data-metric="${key}"]`);
-      const toggleEl = card ? card.querySelector('.target-zone-toggle input') : null;
+    // Recomputes which of the two Y-axes should be visible based on which
+    // metric pills are active, and — if the farmer has isolated exactly one
+    // metric — tightens that axis to fit just that metric's own values.
+    function applyAxisVisibility() {
+      if (!farmChart) return;
+      const activeIdx = farmChart.data.datasets
+        .map((d, i) => ({ i, hidden: !!d.hidden }))
+        .filter(d => !d.hidden)
+        .map(d => d.i);
+
+      const yActive = activeIdx.some(i => i === 0 || i === 3);   // moisture / humidity
+      const y1Active = activeIdx.some(i => i === 1 || i === 2);  // ph / temp
+
+      farmChart.options.scales.y.display = yActive;
+      farmChart.options.scales.y1.display = y1Active;
+
+      if (activeIdx.length === 1) {
+        const only = activeIdx[0];
+        const values = (farmChart.data.datasets[only].data || []).filter(v => typeof v === 'number' && !Number.isNaN(v));
+        if (values.length) {
+          const min = Math.min(...values), max = Math.max(...values);
+          const pad = Math.max((max - min) * 0.15, (max - min === 0 ? Math.abs(max) * 0.1 || 1 : 0));
+          const axisId = METRIC_DATASET_META[only].axis;
+          farmChart.options.scales[axisId].min = min - pad;
+          farmChart.options.scales[axisId].max = max + pad;
+          const otherAxis = axisId === 'y' ? 'y1' : 'y';
+          delete farmChart.options.scales[otherAxis].min;
+          delete farmChart.options.scales[otherAxis].max;
+        }
+      } else {
+        delete farmChart.options.scales.y.min;
+        delete farmChart.options.scales.y.max;
+        delete farmChart.options.scales.y1.min;
+        delete farmChart.options.scales.y1.max;
+      }
+      farmChart.update();
+    }
+
+    // ---- Active-crop optimal safe-zone shading -------------------------
+    // Draws a soft shaded band + dashed threshold lines for whichever
+    // currently-visible metric(s) have a known optimum range for the
+    // active crop (moisture, pH, temperature — humidity has no stored
+    // optimum band yet). Controlled by the "🎯 Safe Zone" toggle switch.
+    const ZONE_METRIC_MAP = [
+      { datasetIndex: 0, plantField: 'moisture', axis: 'y', color: '42, 157, 143' },
+      { datasetIndex: 1, plantField: 'ph', axis: 'y1', color: '224, 122, 63' },
+      { datasetIndex: 2, plantField: 'temp', axis: 'y1', color: '201, 102, 63' }
+    ];
+
+    function toggleTargetRange(checked) {
+      updateTargetZoneAnnotations(checked);
+    }
+
+    function updateTargetZoneAnnotations(forceShow) {
+      if (!farmChart) return;
+      const toggleEl = document.getElementById('toggle-target-range');
       const show = typeof forceShow === 'boolean' ? forceShow : (toggleEl ? toggleEl.checked : true);
 
       const annotations = {};
       const plant = activeCropKey ? loadedPlants[activeCropKey] : null;
-      const plantField = METRIC_META[key].plantField;
 
-      if (show && plant && plantField) {
-        const range = parseRange(plant[plantField]);
-        if (range) {
-          const color = METRIC_META[key].color;
-          const rgb = hexToRgbString(color);
-          annotations['zone'] = {
+      if (show && plant) {
+        ZONE_METRIC_MAP.forEach((m) => {
+          const meta = farmChart.getDatasetMeta(m.datasetIndex);
+          if (!meta || meta.hidden) return; // only shade metrics the farmer currently has visible
+          const range = parseRange(plant[m.plantField]);
+          if (!range) return;
+          annotations[`zone-${m.plantField}`] = {
             type: 'box',
+            yScaleID: m.axis,
             yMin: range.min,
             yMax: range.max,
-            backgroundColor: `rgba(${rgb}, 0.08)`,
+            backgroundColor: `rgba(${m.color}, 0.08)`,
             borderWidth: 0
           };
-          annotations['line-min'] = {
+          annotations[`line-${m.plantField}-min`] = {
             type: 'line',
+            yScaleID: m.axis,
             yMin: range.min,
             yMax: range.min,
-            borderColor: `rgba(${rgb}, 0.55)`,
+            borderColor: `rgba(${m.color}, 0.55)`,
             borderWidth: 1.5,
             borderDash: [6, 4]
           };
-          annotations['line-max'] = {
+          annotations[`line-${m.plantField}-max`] = {
             type: 'line',
+            yScaleID: m.axis,
             yMin: range.max,
             yMax: range.max,
-            borderColor: `rgba(${rgb}, 0.55)`,
+            borderColor: `rgba(${m.color}, 0.55)`,
             borderWidth: 1.5,
             borderDash: [6, 4]
           };
-        }
+        });
       }
 
-      chart.options.plugins.annotation.annotations = annotations;
-      chart.update();
+      farmChart.options.plugins.annotation.annotations = annotations;
+      farmChart.update();
     }
 
-    function hexToRgbString(hex) {
-      const clean = hex.replace('#', '');
-      const r = parseInt(clean.substring(0, 2), 16);
-      const g = parseInt(clean.substring(2, 4), 16);
-      const b = parseInt(clean.substring(4, 6), 16);
-      return `${r}, ${g}, ${b}`;
-    }
-
-    // ---- Chart display style switcher (Area / Line / Bar) per metric -------
+    // ---- Chart display style switcher (Area / Line / Bar) --------------
     const CHART_TYPE_CYCLE = ['area', 'line', 'bar'];
     const CHART_TYPE_META = {
       area: { icon: 'fa-chart-area', label: { en: 'Area', ta: 'பகுதி' } },
       line: { icon: 'fa-chart-line', label: { en: 'Line', ta: 'கோடு' } },
       bar: { icon: 'fa-chart-column', label: { en: 'Bar', ta: 'பட்டை' } }
     };
-    function cycleChartType(key) {
-      const nextIdx = (CHART_TYPE_CYCLE.indexOf(metricChartType[key]) + 1) % CHART_TYPE_CYCLE.length;
-      metricChartType[key] = CHART_TYPE_CYCLE[nextIdx];
+    function cycleChartType() {
+      const nextIdx = (CHART_TYPE_CYCLE.indexOf(currentChartType) + 1) % CHART_TYPE_CYCLE.length;
+      currentChartType = CHART_TYPE_CYCLE[nextIdx];
 
-      const card = document.querySelector(`.metric-chart-card[data-metric="${key}"]`);
-      const meta = CHART_TYPE_META[metricChartType[key]];
-      if (card) {
-        const icon = card.querySelector('.chart-tool-btn i.fa-solid');
+      const btn = document.getElementById('btn-chart-type');
+      const meta = CHART_TYPE_META[currentChartType];
+      if (btn) {
+        const icon = btn.querySelector('i');
         if (icon) icon.className = `fa-solid ${meta.icon}`;
-        const labelEl = card.querySelector('.chart-type-label');
-        if (labelEl) labelEl.textContent = meta.label[currentLang] || meta.label.en;
       }
+      const labelEl = document.getElementById('chart-type-label');
+      if (labelEl) labelEl.textContent = meta.label[currentLang] || meta.label.en;
 
-      initMetricChart(key);
+      initChart();
       if (lastBucketed) {
-        const chart = metricCharts[key];
-        chart.data.labels = lastBucketed.labels;
-        chart.data.datasets[0].data = lastBucketed[METRIC_META[key].field];
-        chart.update();
-        updateTargetZoneAnnotations(key);
+        farmChart.data.labels = lastBucketed.labels;
+        farmChart.data.datasets[0].data = lastBucketed.moisture;
+        farmChart.data.datasets[1].data = lastBucketed.ph;
+        farmChart.data.datasets[2].data = lastBucketed.temp;
+        farmChart.data.datasets[3].data = lastBucketed.humidity;
+        farmChart.update();
+        applyAxisVisibility();
+        updateTargetZoneAnnotations();
       } else {
         updateChartGraph(currentFilter);
       }
     }
 
-    // ---- Zoom / Pan controls -----------------------------------------------
-    function zoomChart(key, factor) {
-      const chart = metricCharts[key];
-      if (!chart || typeof chart.zoom !== 'function') return;
-      chart.zoom(factor);
+    // ---- Zoom / Pan controls ---------------------------------------------
+    function zoomChart(factor) {
+      if (!farmChart || typeof farmChart.zoom !== 'function') return;
+      farmChart.zoom(factor);
     }
-    function resetChartZoom(key) {
-      const chart = metricCharts[key];
-      if (!chart || typeof chart.resetZoom !== 'function') return;
-      chart.resetZoom();
+    function resetChartZoom() {
+      if (!farmChart || typeof farmChart.resetZoom !== 'function') return;
+      farmChart.resetZoom();
     }
 
-    // ---- Fullscreen / expand mode -------------------------------------------
-    function toggleChartFullscreen(key) {
-      const container = document.getElementById('chart-container-' + key);
-      const card = document.querySelector(`.metric-chart-card[data-metric="${key}"]`);
+    // ---- Fullscreen / expand mode -----------------------------------------
+    function toggleChartFullscreen() {
+      const container = document.getElementById('farmVoiceChartContainer');
+      const icon = document.getElementById('fullscreen-icon');
       if (!container) return;
       const isFull = container.classList.toggle('chart-fullscreen');
-      if (card) card.classList.toggle('card-fullscreen-active', isFull);
-      const icon = card ? card.querySelector('.chart-tool-btn[onclick*="toggleChartFullscreen"] i') : null;
       if (icon) icon.className = isFull ? 'fa-solid fa-compress' : 'fa-solid fa-expand';
       document.body.style.overflow = isFull ? 'hidden' : '';
-      setTimeout(() => { const c = metricCharts[key]; if (c) c.resize(); }, 60);
+      setTimeout(() => { if (farmChart) farmChart.resize(); }, 60);
     }
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        METRIC_KEYS.forEach((key) => {
-          const container = document.getElementById('chart-container-' + key);
-          if (container && container.classList.contains('chart-fullscreen')) toggleChartFullscreen(key);
-        });
+        const container = document.getElementById('farmVoiceChartContainer');
+        if (container && container.classList.contains('chart-fullscreen')) toggleChartFullscreen();
       }
     });
 
-    // ---- Point click telemetry inspector ("Ask Sprout") ---------------------
-    function handleChartPointClick(key, evt, elements) {
-      if (!elements || !elements.length) return;
-      const chart = metricCharts[key];
-      if (!chart) return;
+    // ---- Point click telemetry inspector ("Ask Sprout") -------------------
+    function handleChartPointClick(evt, elements) {
+      if (!elements || !elements.length || !farmChart) return;
       const index = elements[0].index;
-      const label = chart.data.labels[index];
-      selectedPoint[key] = { index, label };
+      selectedPointIndex = index;
+      selectedPointLabel = farmChart.data.labels[index];
 
-      const value = chart.data.datasets[0].data[index];
-      const m = METRIC_META[key];
-      const display = (typeof value === 'number' && !Number.isNaN(value)) ? value.toFixed(m.decimals) + m.unit : '--';
+      const fmt = (v, decimals) => (typeof v === 'number' && !Number.isNaN(v)) ? v.toFixed(decimals) : '--';
+      const moist = farmChart.data.datasets[0].data[index];
+      const ph = farmChart.data.datasets[1].data[index];
+      const temp = farmChart.data.datasets[2].data[index];
+      const hum = farmChart.data.datasets[3].data[index];
 
-      const timeEl = document.getElementById('inspector-time-' + key);
-      const valEl = document.getElementById('insp-val-' + key);
-      if (timeEl) timeEl.textContent = label;
-      if (valEl) valEl.textContent = display;
+      document.getElementById('inspector-time').textContent = selectedPointLabel;
+      document.getElementById('insp-moist').textContent = fmt(moist, 1) + '%';
+      document.getElementById('insp-ph').textContent = fmt(ph, 2);
+      document.getElementById('insp-temp').textContent = fmt(temp, 1) + '°C';
+      document.getElementById('insp-hum').textContent = fmt(hum, 1) + '%';
 
-      const inspector = document.getElementById('chart-point-inspector-' + key);
+      const inspector = document.getElementById('chart-point-inspector');
       if (inspector) inspector.style.display = 'block';
     }
 
-    function closePointInspector(key) {
-      const inspector = document.getElementById('chart-point-inspector-' + key);
+    function closePointInspector() {
+      const inspector = document.getElementById('chart-point-inspector');
       if (inspector) inspector.style.display = 'none';
     }
 
-    function askSproutAboutPoint(key) {
-      const sel = selectedPoint[key];
-      const chart = metricCharts[key];
-      if (!sel || !chart) return;
-      const m = METRIC_META[key];
-      const value = chart.data.datasets[0].data[sel.index];
-      const display = (typeof value === 'number' && !Number.isNaN(value)) ? value.toFixed(m.decimals) + m.unit : 'n/a';
-      const metricNameEn = { moisture: 'Soil Moisture', ph: 'Soil pH', temp: 'Temperature', humidity: 'Ambient Humidity' }[key];
-      const metricNameTa = { moisture: 'மண் ஈரப்பதம்', ph: 'மண் pH', temp: 'வெப்பநிலை', humidity: 'சுற்றுப்புற ஈரப்பதம்' }[key];
+    function askSproutAboutSelectedPoint() {
+      if (!farmChart || selectedPointIndex === null) return;
+      const index = selectedPointIndex;
+      const fmt = (v, decimals) => (typeof v === 'number' && !Number.isNaN(v)) ? v.toFixed(decimals) : 'n/a';
+      const moist = fmt(farmChart.data.datasets[0].data[index], 1);
+      const ph = fmt(farmChart.data.datasets[1].data[index], 2);
+      const temp = fmt(farmChart.data.datasets[2].data[index], 1);
+      const hum = fmt(farmChart.data.datasets[3].data[index], 1);
 
       const isTamil = currentLang === 'ta';
       const preset = isTamil
-        ? `${sel.label} நேரத்தில் பதிவான தரவை பாருங்கள்: ${metricNameTa} ${display}. இதைப் பற்றி என்ன சொல்கிறீர்கள்?`
-        : `Take a look at this reading from ${sel.label}: ${metricNameEn} ${display}. What does this tell you?`;
+        ? `${selectedPointLabel} நேரத்தில் பதிவான தரவை பாருங்கள்: மண் ஈரப்பதம் ${moist}%, pH ${ph}, வெப்பநிலை ${temp}°C, ஈரப்பதம் (காற்று) ${hum}%. இதைப் பற்றி என்ன சொல்கிறீர்கள்?`
+        : `Take a look at this reading from ${selectedPointLabel}: Soil Moisture ${moist}%, pH ${ph}, Temperature ${temp}°C, Ambient Humidity ${hum}%. What does this tell you?`;
 
-      closePointInspector(key);
+      closePointInspector();
       switchTab('sprout');
       sendSproutMessage(preset);
     }
@@ -3492,194 +3379,6 @@
       }).join('') + (reading.npkIsDemo
         ? `<p style="grid-column: 1/-1; font-size: 11px; color: var(--muted); margin-top: 4px;">* N/P/K simulated for demo — no physical NPK sensor connected yet.</p>`
         : '');
-<<<<<<< HEAD
-=======
-    }
-
-    // ---- Voice input/output for Sprout AI (Web Speech API) ----
-    // Fully client-side, no extra backend calls: SpeechRecognition transcribes
-    // the farmer's spoken question into the existing chat input, and
-    // speechSynthesis reads Sprout's reply aloud. Language follows the
-    // English/Tamil toggle above (see applyLanguage / currentLang).
-    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let sproutRecognition = null;
-    let sproutListening = false;
-    let speakerOutputOn = localStorage.getItem('ff_speak') === '1';
-
-    function sttLangCode() { return currentLang === 'ta' ? 'ta-IN' : 'en-IN'; }
-    function ttsLangCode() { return currentLang === 'ta' ? 'ta-IN' : 'en-IN'; }
-
-    function updateSpeakerButtonUI() {
-      const btn = document.getElementById('sprout-speaker-toggle');
-      const icon = document.getElementById('sprout-speaker-icon');
-      if (!btn || !icon) return;
-      btn.classList.toggle('active', speakerOutputOn);
-      icon.className = speakerOutputOn ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
-    }
-
-    function toggleSpeakerOutput() {
-      speakerOutputOn = !speakerOutputOn;
-      localStorage.setItem('ff_speak', speakerOutputOn ? '1' : '0');
-      updateSpeakerButtonUI();
-      if (!speakerOutputOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
-    }
-
-    // ---- Voice list loading ----
-    // getVoices() frequently returns [] the first time it's called — the
-    // browser loads its voice list asynchronously and fires 'voiceschanged'
-    // once it's ready. Speaking before that fires silently falls back to a
-    // default (often wrong-language, robotic) voice, which is a big part of
-    // why TTS can sound "terrible". We cache the list and refresh on the
-    // event instead of trusting a single synchronous read.
-    let cachedVoices = [];
-    function refreshVoiceCache() {
-      if ('speechSynthesis' in window) cachedVoices = window.speechSynthesis.getVoices();
-    }
-    if ('speechSynthesis' in window) {
-      refreshVoiceCache();
-      window.speechSynthesis.onvoiceschanged = refreshVoiceCache;
-    }
-
-    function pickVoiceFor(langCode) {
-      const prefix = langCode.split('-')[0];
-      return cachedVoices.find(v => v.lang === langCode)
-        || cachedVoices.find(v => v.lang && v.lang.toLowerCase().startsWith(prefix))
-        || null;
-    }
-
-    // ---- Text cleanup ----
-    // Sprout's replies are chat-formatted prose that may include markdown
-    // (**bold**, bullet dashes), emoji, and units. Speech engines read
-    // literal asterisks/backticks/emoji aloud (or choke on them), which is
-    // a second big source of "terrible"-sounding output. Strip anything
-    // that isn't meant to be heard before it ever reaches the synthesizer.
-    function cleanTextForSpeech(text) {
-      return text
-        .replace(/\*\*(.*?)\*\*/g, '$1')      // **bold**
-        .replace(/\*(.*?)\*/g, '$1')          // *italic*
-        .replace(/`([^`]*)`/g, '$1')          // `code`
-        .replace(/#{1,6}\s*/g, '')            // # headers
-        .replace(/^[-•]\s+/gm, '')            // bullet markers
-        .replace(/\p{Extended_Pictographic}/gu, '') // emoji
-        .replace(/°C/g, ' degrees C')
-        .replace(/°/g, ' degrees ')
-        .replace(/\s+/g, ' ')
-        .trim();
-    }
-
-    // Splits cleaned text into speech-friendly sentence chunks. This isn't
-    // just cosmetic: Chrome has a long-standing bug where a single long
-    // utterance (~15s+ of speech) silently stops partway through with no
-    // error event. Speaking shorter sentences back-to-back sidesteps it
-    // and also gives more natural pacing/pauses than one run-on utterance.
-    function splitIntoSpeechChunks(text) {
-      const parts = text.match(/[^.!?।]+[.!?।]*/g) || [text];
-      return parts.map(p => p.trim()).filter(Boolean);
-    }
-
-    let speechChunkQueue = [];
-    let speechQueueActive = false;
-
-    function speakNextChunk() {
-      if (!speechChunkQueue.length) {
-        speechQueueActive = false;
-        return;
-      }
-      const chunk = speechChunkQueue.shift();
-      const utter = new SpeechSynthesisUtterance(chunk);
-      const langCode = ttsLangCode();
-      utter.lang = langCode;
-      utter.rate = 0.95;   // slightly slower than default — clearer for farm/technical terms
-      utter.pitch = 1;
-
-      const voice = pickVoiceFor(langCode);
-      if (voice) utter.voice = voice;
-
-      utter.onend = speakNextChunk;
-      utter.onerror = (e) => {
-        console.error('Speech synthesis chunk error:', e.error);
-        speakNextChunk(); // keep going rather than aborting the whole reply
-      };
-
-      window.speechSynthesis.speak(utter);
-    }
-
-    function speakSproutReply(text) {
-      if (!speakerOutputOn || !('speechSynthesis' in window) || !text) return;
-
-      const langCode = ttsLangCode();
-      const voice = pickVoiceFor(langCode);
-
-      // Being honest here matters: if there's no Tamil voice installed on
-      // this device, falling back to an English voice would read Tamil
-      // script with English phonemes — that's the "terrible" experience,
-      // not an improvement over saying nothing. Skip audio and say so once
-      // via a chat note instead of forcing garbled speech.
-      if (!voice && currentLang === 'ta') {
-        appendChatMsg(
-          'இந்த சாதனத்தில் தமிழ் குரல் நிறுவப்படவில்லை, எனவே பதிலை உரக்கப் படிக்க முடியவில்லை. (Text reply is above.)',
-          'bot'
-        );
-        return;
-      }
-
-      window.speechSynthesis.cancel();
-      speechChunkQueue = splitIntoSpeechChunks(cleanTextForSpeech(text));
-      speechQueueActive = true;
-      speakNextChunk();
-    }
-
-    function setMicListeningUI(on) {
-      const btn = document.getElementById('sprout-mic-btn');
-      if (!btn) return;
-      btn.classList.toggle('listening', on);
-      btn.innerHTML = on ? '<i class="fa-solid fa-stop"></i>' : '<i class="fa-solid fa-microphone"></i>';
-    }
-
-    function toggleVoiceInput() {
-      if (!SpeechRecognitionCtor) {
-        alert(currentLang === 'ta'
-          ? 'இந்த உலாவியில் குரல் உள்ளீடு ஆதரிக்கப்படவில்லை. Chrome-ஐ முயற்சிக்கவும்.'
-          : 'Voice input is not supported in this browser. Try Chrome on Android/desktop.');
-        return;
-      }
-      if (sproutListening) {
-        sproutRecognition && sproutRecognition.stop();
-        return;
-      }
-
-      sproutRecognition = new SpeechRecognitionCtor();
-      sproutRecognition.lang = sttLangCode();
-      sproutRecognition.interimResults = false;
-      sproutRecognition.maxAlternatives = 1;
-
-      sproutRecognition.onstart = () => {
-        sproutListening = true;
-        setMicListeningUI(true);
-      };
-
-      sproutRecognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        const input = document.getElementById('sprout-chat-input');
-        if (input) input.value = transcript;
-        sendSproutMessage(); // auto-send, same as pressing Enter
-      };
-
-      sproutRecognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-      };
-
-      sproutRecognition.onend = () => {
-        sproutListening = false;
-        setMicListeningUI(false);
-      };
-
-      try {
-        sproutRecognition.start();
-      } catch (err) {
-        console.error('Could not start speech recognition:', err);
-      }
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
     }
 
     // ---- Voice input/output for Sprout AI (Web Speech API) ----
@@ -4005,31 +3704,6 @@
       return div;
     }
 
-    // Summarizes a series of numeric bucket values into min/avg/max plus a
-    // simple trend direction (comparing the average of the first third of
-    // the series against the last third) so Sprout can talk about what's
-    // been *happening*, not just the single latest reading.
-    function summarizeTrend(values) {
-      const nums = (values || []).filter(v => typeof v === 'number' && !Number.isNaN(v));
-      if (nums.length < 2) return null;
-      const min = Math.min(...nums), max = Math.max(...nums);
-      const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
-      const third = Math.max(1, Math.floor(nums.length / 3));
-      const startAvg = nums.slice(0, third).reduce((a, b) => a + b, 0) / third;
-      const endAvg = nums.slice(-third).reduce((a, b) => a + b, 0) / third;
-      const delta = endAvg - startAvg;
-      const spread = max - min;
-      const direction = spread === 0 || Math.abs(delta) < spread * 0.08 ? 'stable' : (delta > 0 ? 'rising' : 'falling');
-      return { min, max, avg, direction, delta };
-    }
-
-    const FILTER_RANGE_LABEL = {
-      '1day': 'the last 24 hours',
-      '1week': 'the last 7 days',
-      '1month': 'the last 30 days',
-      '1year': 'the last 12 months'
-    };
-
     function buildFarmContext() {
       const reading = getLatestReading();
       const plant = activeCropKey ? loadedPlants[activeCropKey] : null;
@@ -4047,25 +3721,6 @@
           `N-P-K: ${reading.nitrogen}-${reading.phosphorus}-${reading.potassium} mg/kg${reading.npkIsDemo ? ' (simulated demo values — no physical NPK sensor connected yet, mention this if asked)' : ''}.`
         : 'No live sensor readings available yet — the ESP32 may be offline.');
 
-      // Historical trend across whichever time range the farmer currently
-      // has selected in the telemetry charts (1 Day / 1 Week / 1 Month /
-      // 1 Year) — this is the same bucketed data driving the four graphs,
-      // so Sprout's read of "what's happening" always matches what the
-      // farmer is looking at on screen.
-      if (lastBucketed) {
-        const rangeLabel = FILTER_RANGE_LABEL[currentFilter] || 'the selected period';
-        const trendLines = [];
-        METRIC_KEYS.forEach((key) => {
-          const t = summarizeTrend(lastBucketed[METRIC_META[key].field]);
-          if (!t) return;
-          const m = METRIC_META[key];
-          trendLines.push(`  • ${m.label}: min ${t.min.toFixed(m.decimals)}${m.unit}, avg ${t.avg.toFixed(m.decimals)}${m.unit}, max ${t.max.toFixed(m.decimals)}${m.unit}, trending ${t.direction}.`);
-        });
-        if (trendLines.length) {
-          lines.push(`Historical trend over ${rangeLabel} (matches the farmer's telemetry charts):\n${trendLines.join('\n')}`);
-        }
-      }
-
       lines.push(activeAlerts.length
         ? `Current out-of-range alerts: ${activeAlerts.map(a => a.message).join('; ')}.`
         : 'No active threshold alerts — all monitored readings are currently within range.');
@@ -4073,48 +3728,14 @@
       lines.push(activeAnomalies.length
         ? `Trend/rate-of-change anomalies (moving unusually fast vs their own recent history, independent of whether they're in range): ${activeAnomalies.map(a => a.message).join('; ')}.`
         : 'No unusual rate-of-change trends detected right now.');
-<<<<<<< HEAD
 
       if (weatherDataCache) {
         lines.push(`Local Weather Forecast: Temp ${weatherDataCache.temp}°C, Humidity ${weatherDataCache.humidity}%, Wind ${weatherDataCache.windSpeed} km/h, Upcoming 12-hour maximum rain probability: ${weatherDataCache.rainChance}%.`);
       }
-=======
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
 
       return lines.join('\n');
     }
 
-<<<<<<< HEAD
-    // Scores every PDF in the library against the farmer's actual question
-    // by splitting each PDF's extracted text into ~500-character chunks and
-    // counting how many distinct question words appear in each chunk — then
-    // hands back the highest-scoring chunks (across all PDFs, not just one)
-    // as grounding excerpts. This replaces the old title-keyword-only match,
-    // which silently skipped every PDF whenever the question didn't happen
-    // to repeat a word from the guide's title.
-    function buildLibraryContext(question) {
-      const keys = Object.keys(loadedPdfs);
-      const textLines = keys.map((key) => {
-        const pdf = loadedPdfs[key];
-        return `- "${pdf.title}" (${pdf.details || 'Organic farming guide'})`;
-=======
-    // Pulls the Organic Farming Library (Firebase /organic_pdfs) into (a) a plain
-    // list of titles/details for context — always included, so Sprout can
-    // mention any guide by name — and (b) the actual PDF bytes, but ONLY for
-    // a guide the question appears to name, capped to one attachment.
-    // Attaching every uploaded PDF to every message (even "hi") was pushing
-    // requests past Gemini's response time and Netlify's function timeout;
-    // attaching on-demand keeps normal chat messages small and fast while
-    // still letting the farmer ask "what does the Bio-Pesticide guide say?"
-    // and get an answer grounded in the real file.
-    //
-    // NOTE: this used to attach the raw PDF bytes for Gemini to read live,
-    // which was slow enough (multimodal PDF parsing) to blow past both our
-    // own abort budget and Netlify's function timeout on guide-specific
-    // questions. Guides are now text-extracted once at upload time
-    // (see savePdfToDatabase's pdf.js step) and stored as pdf.textContent —
-    // reusing that here is dramatically faster since Gemini is just reading
-    // plain text, not parsing a document.
     function buildLibraryContext(question) {
       const keys = Object.keys(loadedPdfs);
       const textLines = [];
@@ -4125,46 +3746,17 @@
         const pdf = loadedPdfs[key];
         textLines.push(`- "${pdf.title}" (${pdf.details || 'Organic farming guide'})`);
 
-        if (relevantExcerpt || !pdf.textContent) return; // at most one guide's text per message
+        if (relevantExcerpt || !pdf.textContent) return;
 
         const titleWords = pdf.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
         const isRelevant = titleWords.some(w => q.includes(w));
         if (!isRelevant) return;
 
         relevantExcerpt = `\n\nFull excerpt from "${pdf.title}":\n${pdf.textContent}`;
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
       });
 
-      const qWords = Array.from(new Set(
-        (question || '').toLowerCase().match(/[a-z\u0b80-\u0bff]{4,}/g) || []
-      ));
-
-      const CHUNK_SIZE = 500;
-      const chunks = [];
-      if (qWords.length) {
-        keys.forEach((key) => {
-          const pdf = loadedPdfs[key];
-          if (!pdf.textContent) return;
-          const normalized = pdf.textContent.replace(/\s+/g, ' ').trim();
-          for (let i = 0; i < normalized.length; i += CHUNK_SIZE) {
-            const chunkText = normalized.slice(i, i + CHUNK_SIZE);
-            const lower = chunkText.toLowerCase();
-            const score = qWords.reduce((s, w) => s + (lower.includes(w) ? 1 : 0), 0);
-            if (score > 0) chunks.push({ title: pdf.title, text: chunkText, score });
-          }
-        });
-      }
-
-      chunks.sort((a, b) => b.score - a.score);
-      const topChunks = chunks.slice(0, 3);
-      const excerptText = topChunks.length
-        ? '\n\nRelevant excerpts from the library for this question (ground your answer in these when applicable, and say which guide you are drawing from):\n' +
-          topChunks.map(c => `From "${c.title}": "...${c.text}..."`).join('\n\n')
-        : '';
-
       return {
-<<<<<<< HEAD
-        text: (textLines.length ? textLines.join('\n') : 'No guides currently in the library.') + excerptText
+        text: (textLines.length ? textLines.join('\n') : 'No guides currently in the library.') + relevantExcerpt
       };
     }
 
@@ -4173,18 +3765,6 @@
       const reading = getLatestReading();
       const plant = activeCropKey ? loadedPlants[activeCropKey] : null;
       const isTamil = currentLang === 'ta';
-=======
-        text: (textLines.length ? textLines.join('\n') : 'No guides currently in the library.') + relevantExcerpt
-      };
-    }
-
-    // Calls our Sprout AI backend to analyze the live farm data against the
-    // Organic Farming Library and answer the farmer's question with grounded
-    // recommendations.
-    async function askSproutAI(question) {
-      const farmContext = buildFarmContext();
-      const library = buildLibraryContext(question);
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
 
       const temp = reading && typeof reading.temperature === 'number' ? reading.temperature : null;
       const moist = reading && typeof reading.soilPercent === 'number' ? reading.soilPercent : null;
@@ -4282,32 +3862,9 @@
               : `Temp: ${temp !== null ? temp.toFixed(1) + '°C' : '--'}, Moisture: ${moist !== null ? moist.toFixed(1) + '%' : '--'}, pH: ${ph !== null ? ph.toFixed(2) : '--'}`)
           : (isTamil ? 'சென்சார் தரவு பெறப்படுகிறது...' : 'Waiting for sensor telemetry...');
 
-        // Surface the single most notably trending metric (if any) from the
-        // farmer's currently selected time range, so even the offline
-        // fallback engine talks about direction of change, not just a
-        // snapshot.
-        let trendNote = '';
-        if (lastBucketed) {
-          let biggest = null;
-          METRIC_KEYS.forEach((key) => {
-            const t = summarizeTrend(lastBucketed[METRIC_META[key].field]);
-            if (t && t.direction !== 'stable') {
-              const magnitude = Math.abs(t.delta);
-              if (!biggest || magnitude > biggest.magnitude) biggest = { key, t, magnitude };
-            }
-          });
-          if (biggest) {
-            const m = METRIC_META[biggest.key];
-            const rangeLabel = FILTER_RANGE_LABEL[currentFilter] || 'the selected period';
-            trendNote = isTamil
-              ? ` ${m.label} கடந்த ${rangeLabel === FILTER_RANGE_LABEL['1day'] ? '24 மணி நேரத்தில்' : 'காலகட்டத்தில்'} ${biggest.t.direction === 'rising' ? 'உயர்ந்து' : 'குறைந்து'} வருகிறது.`
-              : ` ${m.label} has been ${biggest.t.direction} over ${rangeLabel}.`;
-          }
-        }
-
         response = isTamil
-          ? `வணக்கம்! உங்கள் பண்ணை நிலவரம் (${cropName}): ${statsSummary}.${trendNote} ${activeAlerts.length > 0 ? '⚠️ எச்சரிக்கைகள் உள்ளன, சரிபார்க்கவும்.' : 'மண் நிலைமை நன்றாக உள்ளது.'} ஏதேனும் குறிப்பிட்ட சந்தேகம் இருந்தால் கேளுங்கள்!`
-          : `Hello! Farm overview for ${cropName}: ${statsSummary}.${trendNote} ${activeAlerts.length > 0 ? '⚠️ You have active alerts requiring attention.' : 'Overall conditions look healthy.'} Feel free to ask about soil moisture, pH, pest control, or organic tips!`;
+          ? `வணக்கம்! உங்கள் பண்ணை நிலவரம் (${cropName}): ${statsSummary}. ${activeAlerts.length > 0 ? '⚠️ எச்சரிக்கைகள் உள்ளன, சரிபார்க்கவும்.' : 'மண் நிலைமை நன்றாக உள்ளது.'} ஏதேனும் குறிப்பிட்ட சந்தேகம் இருந்தால் கேளுங்கள்!`
+          : `Hello! Farm overview for ${cropName}: ${statsSummary}. ${activeAlerts.length > 0 ? '⚠️ You have active alerts requiring attention.' : 'Overall conditions look healthy.'} Feel free to ask about soil moisture, pH, pest control, or organic tips!`;
       }
 
       return response;
@@ -4327,16 +3884,14 @@ Organic Farming Library available:
 ${library.text}
 
 Instructions:
-<<<<<<< HEAD
 - If a plant leaf photo is attached:
   1. Identify visible symptoms (e.g. chlorosis, necrotic leaf spots, powdery mildew, foliar blight, aphid/caterpillar damage, rust).
   2. State the likely cause (fungal, bacterial, nutrient deficiency, or insect pest).
   3. Prescribe 2-3 specific, practical ORGANIC treatments (e.g. 3% Neem seed kernel extract / oil emulsion with mild soap, fermented sour buttermilk spray, Panchagavya, wood ash dusting, Trichoderma viride, vermiwash).
-- Don't just react to the single latest reading — the "Historical trend" section above shows min/avg/max and direction (rising/falling/stable) for every metric over the farmer's currently selected time range. Reference it explicitly when it's relevant (e.g. "your soil moisture has been falling steadily over the last week, from an average of X% down to Y%" rather than only quoting today's number).
-- When "Relevant excerpts from the library" are provided above, ground your answer in them and name which guide you're drawing from. If no excerpts were retrieved for this question but the library list still shows relevant-sounding guides, you may reference a guide by title and offer to look closer if the farmer wants.
+- Ground recommendations in the Organic Farming Library when applicable.
 - Always favor organic, eco-friendly, non-synthetic remedies.
-- Connect advice to live soil sensor readings, the historical trend, and the weather forecast together (e.g., avoid foliar sprays right before rain; flag if today's reading looks fine but the trend is heading toward trouble).
-- Be concise but substantive: 3-6 sentences for a normal question, more only if a full step-by-step plan is genuinely requested. Avoid generic filler ("that's a great question!", "it depends on many factors") — lead with the actual answer.${currentLang === 'ta' ? '\n- Reply ENTIRELY in Tamil (தமிழ்), using simple, everyday farming terminology.' : ''}`;
+- Connect advice to live soil sensor readings and weather forecast (e.g., avoid foliar sprays right before rain).
+- Be concise, supportive, and practical (3-5 sentences unless a full recipe plan is requested).${currentLang === 'ta' ? '\n- Reply ENTIRELY in Tamil (தமிழ்), using simple, everyday farming terminology.' : ''}`;
 
       const contentBlocks = [{ type: 'text', text: question }];
       if (imageBase64) {
@@ -4359,25 +3914,6 @@ Instructions:
             messages: [{ role: 'user', content: contentBlocks }]
           })
         });
-=======
-- Ground your recommendations in the library excerpt above whenever it's relevant — refer to the guide by title when you use it (e.g. "Per the 'Bio-Pesticide Preparation Guide'...").
-- If no excerpt covers the question, you may draw on general organic-farming knowledge, but make clear you're not quoting a specific guide.
-- Always favor organic, chemical-free recommendations, consistent with the app's focus.
-- If a sensor reading is out of range, proactively connect your advice to it.
-- If there's a trend/rate-of-change anomaly (a metric moving unusually fast vs its own recent history), proactively mention it and suggest a likely cause and next step — this can matter even if the reading is still technically within range.
-- Be concise, warm, and practical — this is a chat bubble on a phone. 3-5 sentences unless the farmer asks for a full plan.${currentLang === 'ta' ? '\n- The farmer has switched the app to Tamil. Reply ENTIRELY in Tamil (தமிழ்), using simple, everyday words a farmer would use. You may keep technical units (°C, %, pH, mg/kg) and crop names in Latin script if there is no common Tamil term.' : ''}`;
-
-      // Calls our own Netlify Function (netlify/functions/sprout-ai.js) rather
-      // than calling an AI API directly, so the API key stays server-side.
-      const response = await fetch('/.netlify/functions/sprout-ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system: systemPrompt,
-          messages: [{ role: 'user', content: question }]
-        })
-      });
->>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
 
         if (response.ok) {
           const data = await response.json();
