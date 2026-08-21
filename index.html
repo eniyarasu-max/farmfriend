@@ -574,10 +574,46 @@
 
     .chart-container {
       position: relative;
-      height: 320px;
       width: 100%;
       transition: all 0.3s ease;
     }
+
+    /* ---- Separate per-reading chart grid ---- */
+    .metric-chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .metric-chart-card {
+      background: rgba(255, 255, 255, 0.4);
+      border: 1px solid rgba(74, 122, 99, 0.15);
+      border-radius: 16px;
+      padding: 12px 14px 6px 14px;
+      transition: opacity 0.2s ease;
+    }
+    .metric-chart-card.hidden-metric { display: none; }
+    .metric-chart-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--moss-deep);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 6px;
+    }
+    .metric-chart-title .pill-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .metric-chart-canvas-wrap { position: relative; height: 200px; width: 100%; }
+
+    @media (max-width: 720px) {
+      .metric-chart-grid { grid-template-columns: 1fr; }
+    }
+
+    .chart-fullscreen .metric-chart-grid {
+      grid-template-columns: 1fr 1fr;
+      height: 100%;
+      overflow-y: auto;
+    }
+    .chart-fullscreen .metric-chart-canvas-wrap { height: 32vh; }
 
     /* Point Click Inspector Popup */
     .chart-point-inspector {
@@ -1178,7 +1214,25 @@
             </button>
           </div>
 
-          <canvas id="farmVoiceChart"></canvas>
+          <!-- One independent chart per reading, instead of one shared/overlaid chart -->
+          <div class="metric-chart-grid" id="metric-chart-grid">
+            <div class="metric-chart-card" data-metric-card="0">
+              <div class="metric-chart-title"><span class="pill-dot" style="background:#2a9d8f;"></span> <span data-i18n="chart.soilMoisture">Soil Moisture</span></div>
+              <div class="metric-chart-canvas-wrap"><canvas id="chart-moisture"></canvas></div>
+            </div>
+            <div class="metric-chart-card" data-metric-card="1">
+              <div class="metric-chart-title"><span class="pill-dot" style="background:#e07a3f;"></span> <span data-i18n="chart.soilPh">Soil pH</span></div>
+              <div class="metric-chart-canvas-wrap"><canvas id="chart-ph"></canvas></div>
+            </div>
+            <div class="metric-chart-card" data-metric-card="2">
+              <div class="metric-chart-title"><span class="pill-dot" style="background:#c9663f;"></span> <span data-i18n="chart.temp">Temperature</span></div>
+              <div class="metric-chart-canvas-wrap"><canvas id="chart-temp"></canvas></div>
+            </div>
+            <div class="metric-chart-card" data-metric-card="3">
+              <div class="metric-chart-title"><span class="pill-dot" style="background:#457b9d;"></span> <span data-i18n="chart.humidity">Humidity</span></div>
+              <div class="metric-chart-canvas-wrap"><canvas id="chart-humidity"></canvas></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1585,7 +1639,7 @@
     let loadedPdfs = {};
     let historyDataStore = [];
     let isAdminAuthenticated = false;
-    let farmChart = null;
+
     let currentFilter = '1day';
 
     // ---- Optimum-range Alerts + Sprout AI state ----
@@ -1990,16 +2044,20 @@
     let selectedPointLabel = null;
 
     const METRIC_DATASET_META = [
-      { key: 'moisture', label: 'Soil Moisture (%)', color: '#2a9d8f', bg: 'rgba(42, 157, 143, 0.12)', axis: 'y' },
-      { key: 'ph', label: 'Soil pH', color: '#e07a3f', bg: 'rgba(224, 122, 63, 0.1)', axis: 'y1' },
-      { key: 'temp', label: 'Temperature (°C)', color: '#c9663f', bg: 'rgba(201, 102, 63, 0.1)', axis: 'y1' },
-      { key: 'humidity', label: 'Humidity (%)', color: '#457b9d', bg: 'rgba(69, 123, 157, 0.12)', axis: 'y' }
+      { key: 'moisture', label: 'Soil Moisture (%)', color: '#2a9d8f', bg: 'rgba(42, 157, 143, 0.12)', canvasId: 'chart-moisture', unit: '%' },
+      { key: 'ph', label: 'Soil pH', color: '#e07a3f', bg: 'rgba(224, 122, 63, 0.1)', canvasId: 'chart-ph', unit: '' },
+      { key: 'temp', label: 'Temperature (°C)', color: '#c9663f', bg: 'rgba(201, 102, 63, 0.1)', canvasId: 'chart-temp', unit: '°C' },
+      { key: 'humidity', label: 'Humidity (%)', color: '#457b9d', bg: 'rgba(69, 123, 157, 0.12)', canvasId: 'chart-humidity', unit: '%' }
     ];
 
-    function buildChartDatasets() {
+    // One independent Chart.js instance per reading (index-aligned with
+    // METRIC_DATASET_META), rather than four datasets overlaid on one chart.
+    let farmCharts = [null, null, null, null];
+
+    function buildChartDataset(m) {
       const isBar = currentChartType === 'bar';
       const isArea = currentChartType === 'area';
-      return METRIC_DATASET_META.map((m, i) => ({
+      return {
         label: m.label,
         data: [],
         borderColor: m.color,
@@ -2009,62 +2067,52 @@
         pointRadius: isBar ? 0 : 2,
         pointHoverRadius: 5,
         borderWidth: isBar ? 0 : 2,
-        borderRadius: isBar ? 4 : 0,
-        yAxisID: m.axis,
-        hidden: farmChart ? farmChart.data.datasets[i]?.hidden : false
-      }));
+        borderRadius: isBar ? 4 : 0
+      };
     }
 
-    // Initialize (or fully rebuild, e.g. on chart-type switch) Chart.js
+    // Initialize (or fully rebuild, e.g. on chart-type switch) all 4 charts
     function initChart() {
-      const ctx = document.getElementById('farmVoiceChart').getContext('2d');
-      if (farmChart) { farmChart.destroy(); }
+      METRIC_DATASET_META.forEach((m, i) => {
+        const canvas = document.getElementById(m.canvasId);
+        if (!canvas) return;
+        if (farmCharts[i]) { farmCharts[i].destroy(); }
 
-      farmChart = new Chart(ctx, {
-        type: currentChartType === 'bar' ? 'bar' : 'line',
-        data: {
-          labels: [],
-          datasets: buildChartDatasets()
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          onClick: handleChartPointClick,
-          plugins: {
-            legend: { position: 'top', labels: { font: { family: 'Manrope' }, usePointStyle: true } },
-            tooltip: { backgroundColor: '#2f5744', titleFont: { family: 'Manrope' }, bodyFont: { family: 'Manrope' } },
-            annotation: { annotations: {} },
-            zoom: {
-              pan: { enabled: true, mode: 'x' },
+        farmCharts[i] = new Chart(canvas.getContext('2d'), {
+          type: currentChartType === 'bar' ? 'bar' : 'line',
+          data: { labels: [], datasets: [buildChartDataset(m)] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            onClick: (evt, elements) => handleChartPointClick(evt, elements, i),
+            plugins: {
+              legend: { display: false },
+              tooltip: { backgroundColor: '#2f5744', titleFont: { family: 'Manrope' }, bodyFont: { family: 'Manrope' } },
+              annotation: { annotations: {} },
               zoom: {
-                wheel: { enabled: true },
-                pinch: { enabled: true },
-                drag: { enabled: true, backgroundColor: 'rgba(74,122,99,0.15)', borderColor: 'rgba(74,122,99,0.4)', borderWidth: 1 },
-                mode: 'x'
+                pan: { enabled: true, mode: 'x' },
+                zoom: {
+                  wheel: { enabled: true },
+                  pinch: { enabled: true },
+                  drag: { enabled: true, backgroundColor: 'rgba(74,122,99,0.15)', borderColor: 'rgba(74,122,99,0.4)', borderWidth: 1 },
+                  mode: 'x'
+                }
+              }
+            },
+            scales: {
+              x: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 10 } } },
+              y: {
+                beginAtZero: false,
+                title: { display: true, text: m.label, font: { family: 'Manrope', size: 10 } },
+                grid: { color: 'rgba(74,122,99,0.08)' }
               }
             }
-          },
-          scales: {
-            x: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 11 } } },
-            y: {
-              beginAtZero: false,
-              position: 'left',
-              title: { display: true, text: 'Moisture / Humidity (%)', font: { family: 'Manrope', size: 11 } },
-              grid: { color: 'rgba(74,122,99,0.08)' }
-            },
-            y1: {
-              beginAtZero: false,
-              position: 'right',
-              title: { display: true, text: 'pH  /  °C', font: { family: 'Manrope', size: 11 } },
-              grid: { display: false }
-            }
           }
-        }
+        });
       });
 
       closePointInspector();
-      applyAxisVisibility();
       updateTargetZoneAnnotations();
     }
 
@@ -2855,22 +2903,22 @@
 
     // Chart Update Function
     let lastBucketed = null;
+    const METRIC_DATA_KEYS = ['moisture', 'ph', 'temp', 'humidity'];
     function updateChartGraph(filter) {
-      if (!farmChart || historyDataStore.length === 0) return;
+      if (farmCharts.every(c => !c) || historyDataStore.length === 0) return;
       currentFilter = filter;
 
       const bucketed = bucketHistory(filter);
       lastBucketed = bucketed;
 
-      farmChart.data.labels = bucketed.labels;
-      farmChart.data.datasets[0].data = bucketed.moisture;
-      farmChart.data.datasets[1].data = bucketed.ph;
-      farmChart.data.datasets[2].data = bucketed.temp;
-      farmChart.data.datasets[3].data = bucketed.humidity;
-      farmChart.update();
+      farmCharts.forEach((chart, i) => {
+        if (!chart) return;
+        chart.data.labels = bucketed.labels;
+        chart.data.datasets[0].data = bucketed[METRIC_DATA_KEYS[i]];
+        chart.update();
+      });
 
       closePointInspector();
-      applyAxisVisibility();
       updateTargetZoneAnnotations();
       renderStatChips(bucketed.raw);
     }
@@ -2882,57 +2930,14 @@
     }
 
     // ---- Metric toggle pills -------------------------------------------
-    // Shows/hides a dataset and, when the farmer isolates a single metric,
-    // tightens that metric's Y-axis to its own data range instead of the
-    // shared default scale, and hides the now-irrelevant axis entirely.
+    // Each reading now has its own independent chart, so a pill simply
+    // shows/hides that metric's whole chart card.
     function toggleMetricDataset(index, el) {
-      if (!farmChart) return;
-      const meta = farmChart.getDatasetMeta(index);
-      const willBeHidden = !meta.hidden ? true : false;
-      meta.hidden = willBeHidden;
-      farmChart.data.datasets[index].hidden = willBeHidden;
+      const card = document.querySelector(`.metric-chart-card[data-metric-card="${index}"]`);
+      const willBeHidden = el.classList.contains('active');
       el.classList.toggle('active', !willBeHidden);
-      farmChart.update();
-      applyAxisVisibility();
-      updateTargetZoneAnnotations();
-    }
-
-    // Recomputes which of the two Y-axes should be visible based on which
-    // metric pills are active, and — if the farmer has isolated exactly one
-    // metric — tightens that axis to fit just that metric's own values.
-    function applyAxisVisibility() {
-      if (!farmChart) return;
-      const activeIdx = farmChart.data.datasets
-        .map((d, i) => ({ i, hidden: !!d.hidden }))
-        .filter(d => !d.hidden)
-        .map(d => d.i);
-
-      const yActive = activeIdx.some(i => i === 0 || i === 3);   // moisture / humidity
-      const y1Active = activeIdx.some(i => i === 1 || i === 2);  // ph / temp
-
-      farmChart.options.scales.y.display = yActive;
-      farmChart.options.scales.y1.display = y1Active;
-
-      if (activeIdx.length === 1) {
-        const only = activeIdx[0];
-        const values = (farmChart.data.datasets[only].data || []).filter(v => typeof v === 'number' && !Number.isNaN(v));
-        if (values.length) {
-          const min = Math.min(...values), max = Math.max(...values);
-          const pad = Math.max((max - min) * 0.15, (max - min === 0 ? Math.abs(max) * 0.1 || 1 : 0));
-          const axisId = METRIC_DATASET_META[only].axis;
-          farmChart.options.scales[axisId].min = min - pad;
-          farmChart.options.scales[axisId].max = max + pad;
-          const otherAxis = axisId === 'y' ? 'y1' : 'y';
-          delete farmChart.options.scales[otherAxis].min;
-          delete farmChart.options.scales[otherAxis].max;
-        }
-      } else {
-        delete farmChart.options.scales.y.min;
-        delete farmChart.options.scales.y.max;
-        delete farmChart.options.scales.y1.min;
-        delete farmChart.options.scales.y1.max;
-      }
-      farmChart.update();
+      if (card) card.classList.toggle('hidden-metric', willBeHidden);
+      if (farmCharts[index]) farmCharts[index].resize();
     }
 
     // ---- Active-crop optimal safe-zone shading -------------------------
@@ -2941,9 +2946,9 @@
     // active crop (moisture, pH, temperature — humidity has no stored
     // optimum band yet). Controlled by the "🎯 Safe Zone" toggle switch.
     const ZONE_METRIC_MAP = [
-      { datasetIndex: 0, plantField: 'moisture', axis: 'y', color: '42, 157, 143' },
-      { datasetIndex: 1, plantField: 'ph', axis: 'y1', color: '224, 122, 63' },
-      { datasetIndex: 2, plantField: 'temp', axis: 'y1', color: '201, 102, 63' }
+      { chartIndex: 0, plantField: 'moisture', color: '42, 157, 143' },
+      { chartIndex: 1, plantField: 'ph', color: '224, 122, 63' },
+      { chartIndex: 2, plantField: 'temp', color: '201, 102, 63' }
     ];
 
     function toggleTargetRange(checked) {
@@ -2951,50 +2956,53 @@
     }
 
     function updateTargetZoneAnnotations(forceShow) {
-      if (!farmChart) return;
+      if (farmCharts.every(c => !c)) return;
       const toggleEl = document.getElementById('toggle-target-range');
       const show = typeof forceShow === 'boolean' ? forceShow : (toggleEl ? toggleEl.checked : true);
-
-      const annotations = {};
       const plant = activeCropKey ? loadedPlants[activeCropKey] : null;
+
+      // Clear all charts' annotations first, then re-populate whichever
+      // metrics have a known optimum range for the active crop.
+      farmCharts.forEach((chart) => {
+        if (chart) chart.options.plugins.annotation.annotations = {};
+      });
 
       if (show && plant) {
         ZONE_METRIC_MAP.forEach((m) => {
-          const meta = farmChart.getDatasetMeta(m.datasetIndex);
-          if (!meta || meta.hidden) return; // only shade metrics the farmer currently has visible
+          const chart = farmCharts[m.chartIndex];
+          const card = document.querySelector(`.metric-chart-card[data-metric-card="${m.chartIndex}"]`);
+          if (!chart || (card && card.classList.contains('hidden-metric'))) return;
           const range = parseRange(plant[m.plantField]);
           if (!range) return;
-          annotations[`zone-${m.plantField}`] = {
-            type: 'box',
-            yScaleID: m.axis,
-            yMin: range.min,
-            yMax: range.max,
-            backgroundColor: `rgba(${m.color}, 0.08)`,
-            borderWidth: 0
-          };
-          annotations[`line-${m.plantField}-min`] = {
-            type: 'line',
-            yScaleID: m.axis,
-            yMin: range.min,
-            yMax: range.min,
-            borderColor: `rgba(${m.color}, 0.55)`,
-            borderWidth: 1.5,
-            borderDash: [6, 4]
-          };
-          annotations[`line-${m.plantField}-max`] = {
-            type: 'line',
-            yScaleID: m.axis,
-            yMin: range.max,
-            yMax: range.max,
-            borderColor: `rgba(${m.color}, 0.55)`,
-            borderWidth: 1.5,
-            borderDash: [6, 4]
+          chart.options.plugins.annotation.annotations = {
+            zone: {
+              type: 'box',
+              yMin: range.min,
+              yMax: range.max,
+              backgroundColor: `rgba(${m.color}, 0.08)`,
+              borderWidth: 0
+            },
+            lineMin: {
+              type: 'line',
+              yMin: range.min,
+              yMax: range.min,
+              borderColor: `rgba(${m.color}, 0.55)`,
+              borderWidth: 1.5,
+              borderDash: [6, 4]
+            },
+            lineMax: {
+              type: 'line',
+              yMin: range.max,
+              yMax: range.max,
+              borderColor: `rgba(${m.color}, 0.55)`,
+              borderWidth: 1.5,
+              borderDash: [6, 4]
+            }
           };
         });
       }
 
-      farmChart.options.plugins.annotation.annotations = annotations;
-      farmChart.update();
+      farmCharts.forEach((chart) => { if (chart) chart.update(); });
     }
 
     // ---- Chart display style switcher (Area / Line / Bar) --------------
@@ -3019,13 +3027,12 @@
 
       initChart();
       if (lastBucketed) {
-        farmChart.data.labels = lastBucketed.labels;
-        farmChart.data.datasets[0].data = lastBucketed.moisture;
-        farmChart.data.datasets[1].data = lastBucketed.ph;
-        farmChart.data.datasets[2].data = lastBucketed.temp;
-        farmChart.data.datasets[3].data = lastBucketed.humidity;
-        farmChart.update();
-        applyAxisVisibility();
+        farmCharts.forEach((chart, i) => {
+          if (!chart) return;
+          chart.data.labels = lastBucketed.labels;
+          chart.data.datasets[0].data = lastBucketed[METRIC_DATA_KEYS[i]];
+          chart.update();
+        });
         updateTargetZoneAnnotations();
       } else {
         updateChartGraph(currentFilter);
@@ -3033,13 +3040,12 @@
     }
 
     // ---- Zoom / Pan controls ---------------------------------------------
+    // Applied to all 4 charts together so they stay in sync.
     function zoomChart(factor) {
-      if (!farmChart || typeof farmChart.zoom !== 'function') return;
-      farmChart.zoom(factor);
+      farmCharts.forEach((chart) => { if (chart && typeof chart.zoom === 'function') chart.zoom(factor); });
     }
     function resetChartZoom() {
-      if (!farmChart || typeof farmChart.resetZoom !== 'function') return;
-      farmChart.resetZoom();
+      farmCharts.forEach((chart) => { if (chart && typeof chart.resetZoom === 'function') chart.resetZoom(); });
     }
 
     // ---- Fullscreen / expand mode -----------------------------------------
@@ -3050,7 +3056,7 @@
       const isFull = container.classList.toggle('chart-fullscreen');
       if (icon) icon.className = isFull ? 'fa-solid fa-compress' : 'fa-solid fa-expand';
       document.body.style.overflow = isFull ? 'hidden' : '';
-      setTimeout(() => { if (farmChart) farmChart.resize(); }, 60);
+      setTimeout(() => { farmCharts.forEach((chart) => { if (chart) chart.resize(); }); }, 60);
     }
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -3060,17 +3066,17 @@
     });
 
     // ---- Point click telemetry inspector ("Ask Sprout") -------------------
-    function handleChartPointClick(evt, elements) {
-      if (!elements || !elements.length || !farmChart) return;
+    function handleChartPointClick(evt, elements, chartIndex) {
+      if (!elements || !elements.length || !lastBucketed) return;
       const index = elements[0].index;
       selectedPointIndex = index;
-      selectedPointLabel = farmChart.data.labels[index];
+      selectedPointLabel = lastBucketed.labels[index];
 
       const fmt = (v, decimals) => (typeof v === 'number' && !Number.isNaN(v)) ? v.toFixed(decimals) : '--';
-      const moist = farmChart.data.datasets[0].data[index];
-      const ph = farmChart.data.datasets[1].data[index];
-      const temp = farmChart.data.datasets[2].data[index];
-      const hum = farmChart.data.datasets[3].data[index];
+      const moist = lastBucketed.moisture[index];
+      const ph = lastBucketed.ph[index];
+      const temp = lastBucketed.temp[index];
+      const hum = lastBucketed.humidity[index];
 
       document.getElementById('inspector-time').textContent = selectedPointLabel;
       document.getElementById('insp-moist').textContent = fmt(moist, 1) + '%';
@@ -3088,13 +3094,13 @@
     }
 
     function askSproutAboutSelectedPoint() {
-      if (!farmChart || selectedPointIndex === null) return;
+      if (!lastBucketed || selectedPointIndex === null) return;
       const index = selectedPointIndex;
       const fmt = (v, decimals) => (typeof v === 'number' && !Number.isNaN(v)) ? v.toFixed(decimals) : 'n/a';
-      const moist = fmt(farmChart.data.datasets[0].data[index], 1);
-      const ph = fmt(farmChart.data.datasets[1].data[index], 2);
-      const temp = fmt(farmChart.data.datasets[2].data[index], 1);
-      const hum = fmt(farmChart.data.datasets[3].data[index], 1);
+      const moist = fmt(lastBucketed.moisture[index], 1);
+      const ph = fmt(lastBucketed.ph[index], 2);
+      const temp = fmt(lastBucketed.temp[index], 1);
+      const hum = fmt(lastBucketed.humidity[index], 1);
 
       const isTamil = currentLang === 'ta';
       const preset = isTamil
@@ -3682,6 +3688,46 @@
     }
 
     // Appends a chat bubble to Sprout's conversation log
+    // Sprout's replies are plain-text prose from Gemini that often contains
+    // light markdown (**bold**, "- " bullet lists, occasional # headers).
+    // Rendered with innerText/innerText-assignment that markdown shows up as
+    // literal asterisks/dashes on screen, which is a big reason replies can
+    // look broken or low-quality even when the underlying advice is fine.
+    // This escapes the text first (so the model can't inject HTML) and then
+    // converts just that small, known-safe markdown subset to real HTML.
+    function renderSproutMarkdown(text) {
+      const escapeHtml = (s) => s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      let safe = escapeHtml(text || '');
+
+      // Bold, then italics (after bold so *word* inside **word** isn't double-hit)
+      safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      safe = safe.replace(/(?<!\*)\*(?!\*)(.+?)\*(?!\*)/g, '<em>$1</em>');
+      // Inline code
+      safe = safe.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+      // Turn "- " / "• " bullet lines into a real <ul>, paragraph-break the rest
+      const lines = safe.split(/\n/);
+      let html = '';
+      let inList = false;
+      lines.forEach((line) => {
+        const bulletMatch = line.match(/^\s*[-•]\s+(.*)$/);
+        if (bulletMatch) {
+          if (!inList) { html += '<ul>'; inList = true; }
+          html += `<li>${bulletMatch[1]}</li>`;
+        } else {
+          if (inList) { html += '</ul>'; inList = false; }
+          if (line.trim() === '') { html += '<br>'; }
+          else { html += `<p>${line}</p>`; }
+        }
+      });
+      if (inList) html += '</ul>';
+      return html;
+    }
+
     function appendChatMsg(text, who, imageSrc) {
       const log = document.getElementById('sprout-chat-log');
       const div = document.createElement('div');
@@ -3696,7 +3742,11 @@
       }
 
       const textSpan = document.createElement('span');
-      textSpan.innerText = text;
+      if (who === 'bot') {
+        textSpan.innerHTML = renderSproutMarkdown(text);
+      } else {
+        textSpan.innerText = text;
+      }
       div.appendChild(textSpan);
 
       log.appendChild(div);
@@ -3891,7 +3941,8 @@ Instructions:
 - Ground recommendations in the Organic Farming Library when applicable.
 - Always favor organic, eco-friendly, non-synthetic remedies.
 - Connect advice to live soil sensor readings and weather forecast (e.g., avoid foliar sprays right before rain).
-- Be concise, supportive, and practical (3-5 sentences unless a full recipe plan is requested).${currentLang === 'ta' ? '\n- Reply ENTIRELY in Tamil (தமிழ்), using simple, everyday farming terminology.' : ''}`;
+- Be specific and practical, not generic — reference the actual numbers in the farm context above rather than speaking in vague terms. Use short paragraphs and, when giving steps or multiple treatment options, a "- " bullet list so it's easy to scan.
+- Keep it as short as fully answering the question allows — usually a few sentences, longer only when a real step-by-step plan or recipe is genuinely needed. Don't pad with disclaimers or restate the question.${currentLang === 'ta' ? '\n- Reply ENTIRELY in Tamil (தமிழ்), using simple, everyday farming terminology.' : ''}`;
 
       const contentBlocks = [{ type: 'text', text: question }];
       if (imageBase64) {
@@ -3960,14 +4011,15 @@ Instructions:
       askSproutAI(userText, leafBase64, leafMime)
         .then((reply) => {
           thinkingEl.classList.remove('typing');
-          thinkingEl.innerText = reply;
+          thinkingEl.innerHTML = renderSproutMarkdown(reply);
           speakSproutReply(reply);
         })
         .catch((err) => {
           console.error('Sprout AI error:', err);
           thinkingEl.classList.remove('typing');
-          thinkingEl.innerText = generateSmartLocalSproutAnswer(userText, Boolean(leafBase64));
-          speakSproutReply(thinkingEl.innerText);
+          const fallback = generateSmartLocalSproutAnswer(userText, Boolean(leafBase64));
+          thinkingEl.innerHTML = renderSproutMarkdown(fallback);
+          speakSproutReply(fallback);
         });
     }
   </script>

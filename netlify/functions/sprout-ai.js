@@ -147,6 +147,14 @@ exports.handler = async (event, context) => {
 
     const payload = {
       contents: geminiContents,
+      // Without an explicit generationConfig, Gemini falls back to its raw
+      // API defaults, which skew terse and occasionally clip mid-thought.
+      // These give Sprout enough room to give a genuinely useful, specific
+      // answer instead of a generic one-liner.
+      generationConfig: {
+        temperature: 0.6,
+        maxOutputTokens: 1024
+      }
     };
 
     // 3. Attach system instructions natively
