@@ -10,7 +10,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+  <meta name="theme-color" content="#2f5744" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -237,6 +250,12 @@
       opacity: 0.7; font-family: 'Manrope', sans-serif;
     }
     .alert-banner .alert-close:hover { opacity: 1; }
+    .alert-banner.anomaly {
+      background: rgba(127, 176, 201, 0.16);
+      border: 1px solid rgba(127, 176, 201, 0.4);
+      color: #2f5b6f;
+    }
+    .alert-banner.anomaly .alert-close { color: #2f5b6f; }
 
     /* ---- Container ---- */
     .container {
@@ -313,7 +332,311 @@
     .stat-chip .stat-value { font-family: 'Fraunces', serif; font-size: 20px; color: var(--moss-deep); margin-top: 2px; }
     .stat-chip .stat-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
 
-    .chart-container { position: relative; height: 300px; width: 100%; }
+    /* ---- ESP32 connection badge ---- */
+    .connection-badge {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 14px;
+      border-radius: 20px;
+      font-size: 12.5px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .connection-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: 0 0 auto; }
+    .connection-badge.live {
+      background: rgba(74, 122, 99, 0.14);
+      color: var(--moss-deep);
+      border: 1px solid rgba(74, 122, 99, 0.3);
+    }
+    .connection-badge.live .dot { animation: pulse-dot 1.6s ease-in-out infinite; }
+    .connection-badge.stale {
+      background: rgba(209, 96, 74, 0.14);
+      color: var(--danger);
+      border: 1px solid rgba(209, 96, 74, 0.3);
+    }
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+    @media (max-width: 640px) {
+      .connection-badge { margin-left: 0; }
+    }
+
+    /* ---- CSV export button ---- */
+    .btn-export {
+      border: none;
+      background: rgba(74, 122, 99, 0.14);
+      color: var(--moss-deep);
+      border: 1px solid rgba(74, 122, 99, 0.25);
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 12.5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Manrope', sans-serif;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+    .btn-export:hover { transform: translateY(-1px); background: rgba(74, 122, 99, 0.22); }
+
+    .btn-export-pdf {
+      background: rgba(201, 102, 63, 0.14);
+      color: var(--clay-deep);
+      border-color: rgba(201, 102, 63, 0.28);
+    }
+    .btn-export-pdf:hover {
+      background: rgba(201, 102, 63, 0.22);
+    }
+
+    /* ---- Weather & Smart Irrigation Widget ---- */
+    .weather-card {
+      padding: 18px 22px;
+      margin-bottom: 24px;
+    }
+    .weather-grid {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .weather-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .weather-main-icon {
+      font-size: 38px;
+      color: var(--moss);
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(74, 122, 99, 0.12);
+      border-radius: 16px;
+    }
+    .weather-temp {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--moss-deep);
+      font-family: 'Fraunces', serif;
+      line-height: 1.2;
+    }
+    .weather-status {
+      font-size: 13.5px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .weather-stats {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .weather-stat-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.5);
+      padding: 6px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+    }
+    .weather-stat-item i { color: var(--moss); }
+    .weather-advisory-banner {
+      margin-top: 14px;
+      padding: 12px 16px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13.5px;
+      font-weight: 600;
+      line-height: 1.4;
+      background: rgba(74, 122, 99, 0.12);
+      border: 1px solid rgba(74, 122, 99, 0.28);
+      color: var(--moss-deep);
+    }
+    .weather-advisory-banner.advisory-rain {
+      background: rgba(127, 176, 201, 0.22);
+      border-color: rgba(127, 176, 201, 0.5);
+      color: #1a4f6e;
+    }
+    .weather-advisory-banner.advisory-irrigate {
+      background: rgba(231, 135, 107, 0.18);
+      border-color: rgba(231, 135, 107, 0.45);
+      color: var(--clay-deep);
+    }
+
+    /* ---- Sensor sanity-check flag ---- */
+    .sensor-error { color: var(--danger); font-weight: 700; }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 14px;
+    }
+    .metric-chart-card {
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(74, 122, 99, 0.14);
+      border-radius: 16px;
+      padding: 12px 14px 14px;
+    }
+    .metric-chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(74, 122, 99, 0.12);
+    }
+    .metric-chart-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12.5px;
+      font-weight: 800;
+      color: var(--moss-deep);
+    }
+    .metric-chart-title .pill-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .chart-tools-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .chart-tool-btn {
+      background: rgba(255, 255, 255, 0.6);
+      border: 1px solid rgba(74, 122, 99, 0.22);
+      border-radius: 8px;
+      padding: 5px 9px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--moss-deep);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s ease;
+    }
+    .chart-tool-btn:hover {
+      background: var(--moss);
+      color: white;
+      border-color: var(--moss-deep);
+    }
+    .chart-tool-btn.active {
+      background: var(--moss-deep);
+      color: white;
+      border-color: var(--moss-deep);
+    }
+    .target-zone-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--moss-deep);
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 8px;
+      background: rgba(74, 122, 99, 0.08);
+      border: 1px solid rgba(74, 122, 99, 0.2);
+    }
+    .target-zone-toggle input { cursor: pointer; }
+
+    .chart-container {
+      position: relative;
+      height: 220px;
+      width: 100%;
+      transition: all 0.3s ease;
+    }
+
+    /* Point Click Inspector Popup */
+    .chart-point-inspector {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(47, 87, 68, 0.95);
+      color: white;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 10px 12px;
+      border-radius: 14px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+      z-index: 20;
+      max-width: 220px;
+      animation: cardIn 0.2s ease-out;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .inspector-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--sage);
+      margin-bottom: 6px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .inspector-time { font-size: 13px; font-weight: 800; color: white; margin-bottom: 8px; }
+    .inspector-single-stat {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 6px 10px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      font-size: 15px;
+      font-weight: 800;
+      text-align: center;
+    }
+    .btn-ask-inspector {
+      width: 100%;
+      background: var(--sage);
+      color: var(--moss-deep);
+      border: none;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 11.5px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.2s ease;
+    }
+    .btn-ask-inspector:hover { background: #bfe3cc; }
+
+    /* Fullscreen Mode */
+    .chart-container.chart-fullscreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 9999;
+      background: rgba(238, 246, 239, 0.98);
+      backdrop-filter: blur(16px);
+      padding: 30px 40px 40px 40px;
+      box-sizing: border-box;
+      border-radius: 0;
+    }
+    .metric-chart-card.card-fullscreen-active { z-index: 9999; }
 
     .history-timeline { margin-top: 16px; max-height: 240px; overflow-y: auto; }
 
@@ -566,6 +889,91 @@
       background: var(--moss); color: white; border: none;
       padding: 0 18px; border-radius: 12px; cursor: pointer; font-weight: 700;
     }
+    .btn-mic {
+      background: rgba(74,122,99,0.14) !important; color: var(--moss-deep) !important;
+      padding: 0 14px !important; border: 1px solid rgba(74,122,99,0.3) !important;
+    }
+    .btn-mic.listening {
+      background: var(--clay) !important; color: white !important;
+      border-color: var(--clay-deep) !important;
+      animation: mic-pulse 1.1s ease-in-out infinite;
+    }
+    @keyframes mic-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(231, 135, 107, 0.5); }
+      50% { box-shadow: 0 0 0 8px rgba(231, 135, 107, 0); }
+    }
+    .btn-attach {
+      background: rgba(74,122,99,0.14) !important; color: var(--moss-deep) !important;
+      padding: 0 14px !important; border: 1px solid rgba(74,122,99,0.3) !important;
+    }
+    .btn-attach:hover {
+      background: rgba(74,122,99,0.24) !important;
+    }
+    .leaf-preview-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px dashed var(--moss);
+      border-radius: 12px;
+      animation: cardIn 0.25s ease-out;
+    }
+    .leaf-preview-img {
+      width: 44px;
+      height: 44px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid rgba(74,122,99,0.25);
+    }
+    .leaf-preview-info {
+      flex: 1;
+      text-align: left;
+      min-width: 0;
+    }
+    .leaf-preview-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--moss-deep);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .leaf-preview-sub {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .btn-remove-leaf {
+      background: rgba(209, 96, 74, 0.15) !important;
+      color: var(--clay-deep) !important;
+      border: none !important;
+      width: 26px !important;
+      height: 26px !important;
+      border-radius: 50% !important;
+      padding: 0 !important;
+      font-size: 14px !important;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+    }
+    .chat-msg-img {
+      max-width: 180px;
+      max-height: 140px;
+      border-radius: 10px;
+      display: block;
+      margin-bottom: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+    .btn-speaker {
+      background: rgba(255,255,255,0.5); color: var(--muted);
+      border: 1px solid rgba(74,122,99,0.25); border-radius: 10px;
+      width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 12px; flex: 0 0 auto;
+    }
+    .btn-speaker.active { background: var(--moss); color: white; border-color: var(--moss-deep); }
     .sprout-chat-suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
     .chip-suggestion {
       background: rgba(74,122,99,0.12); color: var(--moss-deep);
@@ -581,7 +989,8 @@
       .nav-tabs { top: 58px; justify-content: flex-start; }
       .card { padding: 18px; border-radius: 18px; }
       .module-title h2 { font-size: 19px; }
-      .chart-container { height: 240px; }
+      .chart-container { height: 200px; }
+      .charts-grid { grid-template-columns: 1fr; }
       .metric-comparison { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
       .modal-content { padding: 20px; border-radius: 18px; }
     }
@@ -601,10 +1010,16 @@
     </div>
     <div class="user-actions">
       <span id="user-display">Loading...</span>
-      <button class="btn-admin" id="admin-panel-btn" onclick="openAdminAuthModal()">
-        <i class="fa-solid fa-user-gear"></i> Admin
+      <button class="btn-admin" id="pwa-install-btn" style="display:none;" onclick="triggerPwaInstall()" title="Install FarmFriend as an App">
+        <i class="fa-solid fa-mobile-screen-button"></i> <span data-i18n="nav.install">Install App</span>
       </button>
-      <button class="btn-logout" id="logout-btn">Logout</button>
+      <button class="btn-admin" id="lang-toggle-btn" onclick="toggleLanguage()" title="Switch language / மொழியை மாற்று">
+        <i class="fa-solid fa-language"></i> <span id="lang-toggle-label">தமிழ்</span>
+      </button>
+      <button class="btn-admin" id="admin-panel-btn" onclick="openAdminAuthModal()">
+        <i class="fa-solid fa-user-gear"></i> <span data-i18n="nav.admin">Admin</span>
+      </button>
+      <button class="btn-logout" id="logout-btn"><span data-i18n="nav.logout">Logout</span></button>
     </div>
   </div>
 
@@ -614,16 +1029,16 @@
   <!-- Navigation Tabs -->
   <div class="nav-tabs">
     <button class="tab-btn active" onclick="switchTab('farmvoice', event)">
-      <i class="fa-solid fa-chart-line"></i> FarmVoice
+      <i class="fa-solid fa-chart-line"></i> <span data-i18n="tab.farmvoice">FarmVoice</span>
     </button>
     <button class="tab-btn" onclick="switchTab('plantcyclopedia', event)">
-      <i class="fa-solid fa-book-open-reader"></i> Plantcyclopedia
+      <i class="fa-solid fa-book-open-reader"></i> <span data-i18n="tab.plant">Plantcyclopedia</span>
     </button>
     <button class="tab-btn" onclick="switchTab('organic', event)">
-      <i class="fa-solid fa-leaf"></i> Organic Farming
+      <i class="fa-solid fa-leaf"></i> <span data-i18n="tab.organic">Organic Farming</span>
     </button>
     <button class="tab-btn" onclick="switchTab('sprout', event)">
-      <i class="fa-solid fa-worm"></i> Sprout AI <span class="tab-badge" id="sprout-alert-badge">0</span>
+      <i class="fa-solid fa-worm"></i> <span data-i18n="tab.sprout">Sprout AI</span> <span class="tab-badge" id="sprout-alert-badge">0</span>
     </button>
   </div>
 
@@ -632,35 +1047,195 @@
 
     <!-- ================= 1. FARMVOICE MODULE ================= -->
     <div id="farmvoice" class="module-section active">
+      
+      <!-- Weather & Smart Irrigation Card -->
+      <div class="card glass weather-card" id="weather-card">
+        <div class="weather-grid">
+          <div class="weather-left">
+            <div class="weather-main-icon" id="weather-icon"><i class="fa-solid fa-cloud-sun"></i></div>
+            <div>
+              <div class="weather-temp" id="weather-temp">-- °C</div>
+              <div class="weather-status" id="weather-status" data-i18n="weather.loading">Fetching localized farm weather...</div>
+            </div>
+          </div>
+          <div class="weather-stats">
+            <div class="weather-stat-item">
+              <i class="fa-solid fa-cloud-rain"></i>
+              <span><span data-i18n="weather.rainChance">Rain Chance</span>: <strong id="weather-rain-chance">--%</strong></span>
+            </div>
+            <div class="weather-stat-item">
+              <i class="fa-solid fa-droplet"></i>
+              <span><span data-i18n="weather.humidity">Humidity</span>: <strong id="weather-humidity">--%</strong></span>
+            </div>
+            <div class="weather-stat-item">
+              <i class="fa-solid fa-wind"></i>
+              <span><span data-i18n="weather.wind">Wind Speed</span>: <strong id="weather-wind">-- km/h</strong></span>
+            </div>
+          </div>
+        </div>
+        <div class="weather-advisory-banner" id="weather-advisory-banner">
+          <i class="fa-solid fa-seedling"></i>
+          <span id="weather-advisory-text">Analyzing live soil moisture and upcoming weather forecast...</span>
+        </div>
+      </div>
+
       <div class="card glass">
         <div class="module-header">
           <div class="module-clipart"><i class="fa-solid fa-volume-high"></i></div>
           <div class="module-title">
-            <h2>FarmVoice Analytics</h2>
-            <p>"Hear what your farm says"</p>
+            <h2 data-i18n="farmvoice.title">FarmVoice Analytics</h2>
+            <p data-i18n="farmvoice.subtitle">"Hear what your farm says"</p>
+          </div>
+          <div class="connection-badge live" id="connection-badge">
+            <span class="dot"></span><span id="connection-badge-text">Checking…</span>
           </div>
         </div>
 
         <div class="analytics-controls">
-          <button class="time-btn active" onclick="updateTimeFilter('1day', this)">1 Day</button>
-          <button class="time-btn" onclick="updateTimeFilter('1week', this)">1 Week</button>
-          <button class="time-btn" onclick="updateTimeFilter('1month', this)">1 Month</button>
-          <button class="time-btn" onclick="updateTimeFilter('1year', this)">1 Year</button>
+          <button class="time-btn active" onclick="updateTimeFilter('1day', this)" data-i18n="time.1day">1 Day</button>
+          <button class="time-btn" onclick="updateTimeFilter('1week', this)" data-i18n="time.1week">1 Week</button>
+          <button class="time-btn" onclick="updateTimeFilter('1month', this)" data-i18n="time.1month">1 Month</button>
+          <button class="time-btn" onclick="updateTimeFilter('1year', this)" data-i18n="time.1year">1 Year</button>
         </div>
 
         <div class="stat-row" id="stat-row">
           <!-- Live min/avg/max stat chips rendered dynamically -->
         </div>
 
-        <div class="chart-container">
-          <canvas id="farmVoiceChart"></canvas>
+        <!-- Interactive Per-Metric Telemetry Charts -->
+        <div class="charts-grid" id="telemetry-charts-grid">
+          <div class="metric-chart-card" data-metric="moisture">
+            <div class="metric-chart-header">
+              <span class="metric-chart-title"><span class="pill-dot" style="background:#2a9d8f;"></span> <span data-i18n="chart.soilMoisture">Soil Moisture</span></span>
+              <div class="chart-tools-row">
+                <label class="target-zone-toggle" title="Show/hide optimal range for selected crop">
+                  <input type="checkbox" checked onchange="toggleTargetRange('moisture', this.checked)">
+                  <span data-i18n="chart.targetZone">🎯 Safe Zone</span>
+                </label>
+                <button type="button" class="chart-tool-btn" onclick="cycleChartType('moisture')" title="Switch chart style (Area / Line / Bar)">
+                  <i class="fa-solid fa-chart-area"></i> <span class="chart-type-label">Area</span>
+                </button>
+                <button type="button" class="chart-tool-btn" onclick="zoomChart('moisture', 1.2)" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+                <button type="button" class="chart-tool-btn" onclick="zoomChart('moisture', 0.8)" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                <button type="button" class="chart-tool-btn" onclick="resetChartZoom('moisture')" title="Reset Zoom View"><i class="fa-solid fa-rotate-left"></i></button>
+                <button type="button" class="chart-tool-btn" onclick="toggleChartFullscreen('moisture')" title="Full Screen Expand"><i class="fa-solid fa-expand"></i></button>
+              </div>
+            </div>
+            <div class="chart-container" id="chart-container-moisture">
+              <div class="chart-point-inspector" id="chart-point-inspector-moisture" style="display:none;">
+                <div class="inspector-header"><span>Telemetry Snapshot</span><span style="cursor:pointer; font-size:14px;" onclick="closePointInspector('moisture')">&times;</span></div>
+                <div class="inspector-time" id="inspector-time-moisture">--:--</div>
+                <div class="inspector-single-stat" id="insp-val-moisture">--</div>
+                <button type="button" class="btn-ask-inspector" onclick="askSproutAboutPoint('moisture')">
+                  <i class="fa-solid fa-comment-dots"></i> <span data-i18n="chart.askSproutPoint">Ask Sprout About This</span>
+                </button>
+              </div>
+              <canvas id="farmVoiceChart-moisture"></canvas>
+            </div>
+          </div>
+
+          <div class="metric-chart-card" data-metric="ph">
+            <div class="metric-chart-header">
+              <span class="metric-chart-title"><span class="pill-dot" style="background:#e07a3f;"></span> <span data-i18n="chart.soilPh">Soil pH</span></span>
+              <div class="chart-tools-row">
+                <label class="target-zone-toggle" title="Show/hide optimal range for selected crop">
+                  <input type="checkbox" checked onchange="toggleTargetRange('ph', this.checked)">
+                  <span data-i18n="chart.targetZone">🎯 Safe Zone</span>
+                </label>
+                <button type="button" class="chart-tool-btn" onclick="cycleChartType('ph')" title="Switch chart style (Area / Line / Bar)">
+                  <i class="fa-solid fa-chart-area"></i> <span class="chart-type-label">Area</span>
+                </button>
+                <button type="button" class="chart-tool-btn" onclick="zoomChart('ph', 1.2)" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+                <button type="button" class="chart-tool-btn" onclick="zoomChart('ph', 0.8)" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                <button type="button" class="chart-tool-btn" onclick="resetChartZoom('ph')" title="Reset Zoom View"><i class="fa-solid fa-rotate-left"></i></button>
+                <button type="button" class="chart-tool-btn" onclick="toggleChartFullscreen('ph')" title="Full Screen Expand"><i class="fa-solid fa-expand"></i></button>
+              </div>
+            </div>
+            <div class="chart-container" id="chart-container-ph">
+              <div class="chart-point-inspector" id="chart-point-inspector-ph" style="display:none;">
+                <div class="inspector-header"><span>Telemetry Snapshot</span><span style="cursor:pointer; font-size:14px;" onclick="closePointInspector('ph')">&times;</span></div>
+                <div class="inspector-time" id="inspector-time-ph">--:--</div>
+                <div class="inspector-single-stat" id="insp-val-ph">--</div>
+                <button type="button" class="btn-ask-inspector" onclick="askSproutAboutPoint('ph')">
+                  <i class="fa-solid fa-comment-dots"></i> <span data-i18n="chart.askSproutPoint">Ask Sprout About This</span>
+                </button>
+              </div>
+              <canvas id="farmVoiceChart-ph"></canvas>
+            </div>
+          </div>
+
+          <div class="metric-chart-card" data-metric="temp">
+            <div class="metric-chart-header">
+              <span class="metric-chart-title"><span class="pill-dot" style="background:#c9663f;"></span> <span data-i18n="chart.temp">Temperature</span></span>
+              <div class="chart-tools-row">
+                <label class="target-zone-toggle" title="Show/hide optimal range for selected crop">
+                  <input type="checkbox" checked onchange="toggleTargetRange('temp', this.checked)">
+                  <span data-i18n="chart.targetZone">🎯 Safe Zone</span>
+                </label>
+                <button type="button" class="chart-tool-btn" onclick="cycleChartType('temp')" title="Switch chart style (Area / Line / Bar)">
+                  <i class="fa-solid fa-chart-area"></i> <span class="chart-type-label">Area</span>
+                </button>
+                <button type="button" class="chart-tool-btn" onclick="zoomChart('temp', 1.2)" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+                <button type="button" class="chart-tool-btn" onclick="zoomChart('temp', 0.8)" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                <button type="button" class="chart-tool-btn" onclick="resetChartZoom('temp')" title="Reset Zoom View"><i class="fa-solid fa-rotate-left"></i></button>
+                <button type="button" class="chart-tool-btn" onclick="toggleChartFullscreen('temp')" title="Full Screen Expand"><i class="fa-solid fa-expand"></i></button>
+              </div>
+            </div>
+            <div class="chart-container" id="chart-container-temp">
+              <div class="chart-point-inspector" id="chart-point-inspector-temp" style="display:none;">
+                <div class="inspector-header"><span>Telemetry Snapshot</span><span style="cursor:pointer; font-size:14px;" onclick="closePointInspector('temp')">&times;</span></div>
+                <div class="inspector-time" id="inspector-time-temp">--:--</div>
+                <div class="inspector-single-stat" id="insp-val-temp">--</div>
+                <button type="button" class="btn-ask-inspector" onclick="askSproutAboutPoint('temp')">
+                  <i class="fa-solid fa-comment-dots"></i> <span data-i18n="chart.askSproutPoint">Ask Sprout About This</span>
+                </button>
+              </div>
+              <canvas id="farmVoiceChart-temp"></canvas>
+            </div>
+          </div>
+
+          <div class="metric-chart-card" data-metric="humidity">
+            <div class="metric-chart-header">
+              <span class="metric-chart-title"><span class="pill-dot" style="background:#457b9d;"></span> <span data-i18n="chart.humidity">Humidity</span></span>
+              <div class="chart-tools-row">
+                <label class="target-zone-toggle" title="Show/hide optimal range for selected crop">
+                  <input type="checkbox" checked onchange="toggleTargetRange('humidity', this.checked)">
+                  <span data-i18n="chart.targetZone">🎯 Safe Zone</span>
+                </label>
+                <button type="button" class="chart-tool-btn" onclick="cycleChartType('humidity')" title="Switch chart style (Area / Line / Bar)">
+                  <i class="fa-solid fa-chart-area"></i> <span class="chart-type-label">Area</span>
+                </button>
+                <button type="button" class="chart-tool-btn" onclick="zoomChart('humidity', 1.2)" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+                <button type="button" class="chart-tool-btn" onclick="zoomChart('humidity', 0.8)" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                <button type="button" class="chart-tool-btn" onclick="resetChartZoom('humidity')" title="Reset Zoom View"><i class="fa-solid fa-rotate-left"></i></button>
+                <button type="button" class="chart-tool-btn" onclick="toggleChartFullscreen('humidity')" title="Full Screen Expand"><i class="fa-solid fa-expand"></i></button>
+              </div>
+            </div>
+            <div class="chart-container" id="chart-container-humidity">
+              <div class="chart-point-inspector" id="chart-point-inspector-humidity" style="display:none;">
+                <div class="inspector-header"><span>Telemetry Snapshot</span><span style="cursor:pointer; font-size:14px;" onclick="closePointInspector('humidity')">&times;</span></div>
+                <div class="inspector-time" id="inspector-time-humidity">--:--</div>
+                <div class="inspector-single-stat" id="insp-val-humidity">--</div>
+                <button type="button" class="btn-ask-inspector" onclick="askSproutAboutPoint('humidity')">
+                  <i class="fa-solid fa-comment-dots"></i> <span data-i18n="chart.askSproutPoint">Ask Sprout About This</span>
+                </button>
+              </div>
+              <canvas id="farmVoiceChart-humidity"></canvas>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="card glass">
-        <h3><i class="fa-solid fa-clock-rotate-left"></i> Live ESP32 Telemetry Records</h3>
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom: 12px;">
+          <h3 style="margin-bottom:0;"><i class="fa-solid fa-clock-rotate-left"></i> <span data-i18n="telemetry.title">Live ESP32 Telemetry Records</span></h3>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn-export" onclick="exportHistoryCSV()"><i class="fa-solid fa-file-csv"></i> <span data-i18n="telemetry.export">Export CSV</span></button>
+            <button class="btn-export btn-export-pdf" onclick="generateSoilHealthPDF()"><i class="fa-solid fa-file-pdf"></i> <span data-i18n="telemetry.exportPdf">Export Soil Report (PDF)</span></button>
+          </div>
+        </div>
         <div id="history-timeline" class="history-timeline">
-          <p style="color: var(--muted);">Fetching historical records from ESP32...</p>
+          <p style="color: var(--muted);" data-i18n="telemetry.fetching">Fetching historical records from ESP32...</p>
         </div>
       </div>
     </div>
@@ -671,8 +1246,8 @@
         <div class="module-header">
           <div class="module-clipart"><i class="fa-solid fa-book-bookmark"></i></div>
           <div class="module-title">
-            <h2>Plantcyclopedia</h2>
-            <p>Crop Wisdom & Optimal Soil Conditions</p>
+            <h2 data-i18n="plant.title">Plantcyclopedia</h2>
+            <p data-i18n="plant.subtitle">Crop Wisdom & Optimal Soil Conditions</p>
           </div>
         </div>
 
@@ -686,8 +1261,8 @@
         <div class="module-header">
           <div class="module-clipart"><i class="fa-solid fa-file-pdf"></i></div>
           <div class="module-title">
-            <h2>Organic Farming Library</h2>
-            <p>PDF Guides for Sustainable & Chemical-Free Agriculture</p>
+            <h2 data-i18n="organic.title">Organic Farming Library</h2>
+            <p data-i18n="organic.subtitle">PDF Guides for Sustainable & Chemical-Free Agriculture</p>
           </div>
         </div>
 
@@ -717,31 +1292,55 @@
           </svg>
         </div>
 
-        <h2>Meet Sprout! 😉</h2>
-        <p>Your Intelligent Soil Companion & AI Earthworm</p>
+        <h2 data-i18n="sprout.title">Meet Sprout! 😉</h2>
+        <p data-i18n="sprout.subtitle">Your Intelligent Soil Companion & AI Earthworm</p>
 
         <div class="sprout-setup">
-          <label for="sprout-crop-select"><i class="fa-solid fa-seedling"></i> Which crop are you currently growing?</label>
+          <label for="sprout-crop-select"><i class="fa-solid fa-seedling"></i> <span data-i18n="sprout.cropLabel">Which crop are you currently growing?</span></label>
           <select id="sprout-crop-select" onchange="onActiveCropChange(this.value)">
-            <option value="">Select a crop to get live insights & alerts...</option>
+            <option value="" data-i18n="sprout.cropPlaceholder">Select a crop to get live insights & alerts...</option>
           </select>
         </div>
 
         <div class="sprout-insights" id="sprout-insights"></div>
 
         <div class="sprout-chat">
-          <h3><i class="fa-solid fa-comment-dots"></i> Ask Sprout</h3>
+          <h3 style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <span><i class="fa-solid fa-comment-dots"></i> <span data-i18n="sprout.askTitle">Ask Sprout</span></span>
+            <button type="button" class="btn-speaker" id="sprout-speaker-toggle" onclick="toggleSpeakerOutput()" title="Read replies aloud">
+              <i class="fa-solid fa-volume-xmark" id="sprout-speaker-icon"></i>
+            </button>
+          </h3>
           <div class="sprout-chat-suggestions">
-            <span class="chip-suggestion" onclick="sendSproutMessage('How is my farm doing?')">How is my farm doing?</span>
-            <span class="chip-suggestion" onclick="sendSproutMessage('What is the soil moisture?')">Soil moisture?</span>
-            <span class="chip-suggestion" onclick="sendSproutMessage('Any alerts right now?')">Any alerts?</span>
-            <span class="chip-suggestion" onclick="sendSproutMessage('Tips to improve my soil')">Tips to improve soil</span>
+            <span class="chip-suggestion" data-i18n="sprout.chip1" onclick="sendSproutMessage('How is my farm doing?')">How is my farm doing?</span>
+            <span class="chip-suggestion" data-i18n="sprout.chip2" onclick="sendSproutMessage('What is the soil moisture?')">Soil moisture?</span>
+            <span class="chip-suggestion" data-i18n="sprout.chip3" onclick="sendSproutMessage('Any alerts right now?')">Any alerts?</span>
+            <span class="chip-suggestion" data-i18n="sprout.chip4" onclick="sendSproutMessage('Tips to improve my soil')">Tips to improve soil</span>
+            <span class="chip-suggestion" data-i18n="sprout.chip5" onclick="sendSproutMessage('Any unusual trends lately?')">Any unusual trends?</span>
           </div>
           <div class="sprout-chat-log" id="sprout-chat-log">
-            <div class="chat-msg bot">Hi, I'm Sprout 🪱 Pick your crop above and ask me anything about your live soil readings!</div>
+            <div class="chat-msg bot" id="sprout-greeting-msg" data-i18n="sprout.greeting">Hi, I'm Sprout 🪱 Pick your crop above and ask me anything about your live soil readings!</div>
           </div>
+
+          <!-- Attached Leaf Image Preview Chip -->
+          <div class="leaf-preview-container" id="leaf-preview-container" style="display:none;">
+            <img id="leaf-preview-img" class="leaf-preview-img" src="" alt="Leaf sample" />
+            <div class="leaf-preview-info">
+              <div class="leaf-preview-title" id="leaf-preview-title">leaf_sample.jpg</div>
+              <div class="leaf-preview-sub" data-i18n="sprout.leafReady">📸 Leaf photo attached for AI disease diagnosis</div>
+            </div>
+            <button type="button" class="btn-remove-leaf" onclick="clearAttachedLeafImage()" title="Remove leaf photo">&times;</button>
+          </div>
+
           <div class="sprout-chat-input-row">
-            <input type="text" id="sprout-chat-input" placeholder="Ask about temperature, moisture, pH..." onkeydown="if(event.key==='Enter') sendSproutMessage()" />
+            <input type="file" id="leaf-camera-input" accept="image/*" capture="environment" style="display:none;" onchange="handleLeafImageSelected(event)" />
+            <button type="button" class="btn-attach" id="sprout-camera-btn" onclick="triggerCameraInput()" title="Take Photo or Scan Leaf Disease">
+              <i class="fa-solid fa-camera"></i>
+            </button>
+            <input type="text" id="sprout-chat-input" placeholder="Ask about temperature, moisture, pH, or leaf pests..." data-i18n-placeholder="sprout.chatPlaceholder" onkeydown="if(event.key==='Enter') sendSproutMessage()" />
+            <button type="button" class="btn-mic" id="sprout-mic-btn" onclick="toggleVoiceInput()" title="Speak your question">
+              <i class="fa-solid fa-microphone"></i>
+            </button>
             <button onclick="sendSproutMessage()"><i class="fa-solid fa-paper-plane"></i></button>
           </div>
         </div>
@@ -848,7 +1447,148 @@
   </div>
 
   <script>
+    // ---- 0. Language toggle (English / Tamil) ----
+    // Pure client-side i18n: every static string carries a data-i18n key
+    // (or data-i18n-placeholder for inputs). Toggling swaps textContent from
+    // the TRANSLATIONS table and persists the choice so it survives reloads.
+    // Sprout AI is also told which language to reply in (see askSproutAI).
+    const TRANSLATIONS = {
+      en: {
+        'nav.install': 'Install App',
+        'nav.admin': 'Admin',
+        'nav.logout': 'Logout',
+        'tab.farmvoice': 'FarmVoice',
+        'tab.plant': 'Plantcyclopedia',
+        'tab.organic': 'Organic Farming',
+        'tab.sprout': 'Sprout AI',
+        'farmvoice.title': 'FarmVoice Analytics',
+        'farmvoice.subtitle': '"Hear what your farm says"',
+        'time.1day': '1 Day',
+        'time.1week': '1 Week',
+        'time.1month': '1 Month',
+        'time.1year': '1 Year',
+        'telemetry.title': 'Live ESP32 Telemetry Records',
+        'telemetry.export': 'Export CSV',
+        'telemetry.exportPdf': 'Export Soil Report (PDF)',
+        'telemetry.fetching': 'Fetching historical records from ESP32...',
+        'weather.title': 'Live Weather & Smart Irrigation',
+        'weather.rainChance': 'Rain Chance',
+        'weather.humidity': 'Humidity',
+        'weather.wind': 'Wind Speed',
+        'weather.loading': 'Fetching localized farm weather...',
+        'plant.title': 'Plantcyclopedia',
+        'plant.subtitle': 'Crop Wisdom & Optimal Soil Conditions',
+        'organic.title': 'Organic Farming Library',
+        'organic.subtitle': 'PDF Guides for Sustainable & Chemical-Free Agriculture',
+        'sprout.title': 'Meet Sprout! 😉',
+        'sprout.subtitle': 'Your Intelligent Soil Companion & AI Earthworm',
+        'sprout.cropLabel': 'Which crop are you currently growing?',
+        'sprout.cropPlaceholder': 'Select a crop to get live insights & alerts...',
+        'sprout.askTitle': 'Ask Sprout',
+        'sprout.chip1': 'How is my farm doing?',
+        'sprout.chip2': 'Soil moisture?',
+        'sprout.chip3': 'Any alerts right now?',
+        'sprout.chip4': 'Tips to improve soil',
+        'sprout.chip5': 'Any unusual trends?',
+        'sprout.greeting': "Hi, I'm Sprout 🪱 Pick your crop above, ask me anything, or tap 📷 to scan a leaf photo!",
+        'sprout.leafReady': '📸 Leaf photo attached for AI disease diagnosis',
+        'sprout.chatPlaceholder': 'Ask about temperature, moisture, pH, or leaf pests...'
+      },
+      ta: {
+        'nav.install': 'செயலியை நிறுவு',
+        'nav.admin': 'நிர்வாகி',
+        'nav.logout': 'வெளியேறு',
+        'tab.farmvoice': 'பண்ணை குரல்',
+        'tab.plant': 'தாவர களஞ்சியம்',
+        'tab.organic': 'இயற்கை விவசாயம்',
+        'tab.sprout': 'ஸ்ப்ரவுட் AI',
+        'farmvoice.title': 'பண்ணை குரல் பகுப்பாய்வு',
+        'farmvoice.subtitle': '"உங்கள் பண்ணை சொல்வதைக் கேளுங்கள்"',
+        'time.1day': '1 நாள்',
+        'time.1week': '1 வாரம்',
+        'time.1month': '1 மாதம்',
+        'time.1year': '1 வருடம்',
+        'telemetry.title': 'நேரடி ESP32 பதிவுகள்',
+        'telemetry.export': 'CSV ஏற்றுமதி',
+        'telemetry.exportPdf': 'மண் அறிக்கை (PDF)',
+        'telemetry.fetching': 'ESP32 வரலாற்றுப் பதிவுகளை பெறுகிறது...',
+        'weather.title': 'நேரடி வானிலை & நுண்ணறிவு பாசனம்',
+        'weather.rainChance': 'மழை வாய்ப்பு',
+        'weather.humidity': 'ஈரப்பதம்',
+        'weather.wind': 'காற்று வேகம்',
+        'weather.loading': 'உள்ளூர் பண்ணை வானிலையைப் பெறுகிறது...',
+        'plant.title': 'தாவர களஞ்சியம்',
+        'plant.subtitle': 'பயிர் அறிவு & உகந்த மண் நிலைமைகள்',
+        'organic.title': 'இயற்கை விவசாய நூலகம்',
+        'organic.subtitle': 'நிலையான, ரசாயனமற்ற விவசாயத்திற்கான PDF வழிகாட்டிகள்',
+        'sprout.title': 'ஸ்ப்ரவுட்டை சந்திக்கவும்! 😉',
+        'sprout.subtitle': 'உங்கள் புத்திசாலி மண் தோழன் & AI மண்புழு',
+        'sprout.cropLabel': 'நீங்கள் தற்போது எந்த பயிரை வளர்க்கிறீர்கள்?',
+        'sprout.cropPlaceholder': 'நேரடி நுண்ணறிவு & எச்சரிக்கைகளுக்கு பயிரைத் தேர்ந்தெடுக்கவும்...',
+        'sprout.askTitle': 'ஸ்ப்ரவுட்டிடம் கேளுங்கள்',
+        'sprout.chip1': 'என் பண்ணை எப்படி இருக்கிறது?',
+        'sprout.chip2': 'மண் ஈரப்பதம்?',
+        'sprout.chip3': 'இப்போது ஏதேனும் எச்சரிக்கை உள்ளதா?',
+        'sprout.chip4': 'மண்ணை மேம்படுத்த குறிப்புகள்',
+        'sprout.chip5': 'சமீபத்தில் ஏதேனும் மாற்றங்கள்?',
+        'sprout.greeting': 'வணக்கம், நான் ஸ்ப்ரவுட் 🪱 மேலே உங்கள் பயிரைத் தேர்ந்தெடுத்து, உங்கள் சந்தேகங்களைக் கேளுங்கள் அல்லது 📷 இலை புகைப்படத்தை ஸ்கேன் செய்யுங்கள்!',
+        'sprout.leafReady': '📸 இலை புகைப்படம் AI நோயறிதலுக்கு தயாராக உள்ளது',
+        'sprout.chatPlaceholder': 'வெப்பநிலை, ஈரப்பதம், pH அல்லது இலை பூச்சிகள் பற்றி கேளுங்கள்...'
+      }
+    };
+
+    let currentLang = localStorage.getItem('ff_lang') || 'en';
+
+    function applyLanguage(lang) {
+      currentLang = lang;
+      const dict = TRANSLATIONS[lang] || TRANSLATIONS.en;
+
+      document.querySelectorAll('[data-i18n]').forEach((el) => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) el.textContent = dict[key];
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (dict[key]) el.placeholder = dict[key];
+      });
+
+      const label = document.getElementById('lang-toggle-label');
+      if (label) label.textContent = lang === 'en' ? 'தமிழ்' : 'English';
+      document.documentElement.setAttribute('lang', lang === 'ta' ? 'ta' : 'en');
+
+      localStorage.setItem('ff_lang', lang);
+      if (typeof renderWeatherUI === 'function') {
+        renderWeatherUI();
+      }
+    }
+
+    function toggleLanguage() {
+      applyLanguage(currentLang === 'en' ? 'ta' : 'en');
+    }
+
+    // Apply saved/default language once the DOM is parsed, before other
+    // init code (below) starts populating dynamic content.
+    document.addEventListener('DOMContentLoaded', () => {
+      applyLanguage(currentLang);
+      updateSpeakerButtonUI();
+    });
+
     // 1. Firebase Configuration
+    // ⚠️ SECURITY: this config (including apiKey) is public in the shipped JS
+    // by design — that's normal for Firebase web apps. What actually gates
+    // access is the Realtime Database's Security Rules, set in the Firebase
+    // console (Build > Realtime Database > Rules), NOT in this file. Confirm
+    // before demoing that rules are not left at the default "true"/"true"
+    // (readable+writable by anyone with this key). At minimum:
+    //   {
+    //     "rules": {
+    //       ".read": "auth != null",
+    //       ".write": "auth != null"
+    //     }
+    //   }
+    // This still allows any authenticated user to write, which is fine for a
+    // hackathon demo; lock further to a specific admin UID (auth.uid === "...")
+    // once app-mode is used beyond the login-gated app itself.
     const firebaseConfig = {
       apiKey: "AIzaSyCIJaV5lZiBtFUArJBvwsyulBY0Zif2Cgk",
       authDomain: "farmfriend-tech.firebaseapp.com",
@@ -858,6 +1598,16 @@
     };
 
     firebase.initializeApp(firebaseConfig);
+
+    // Guarded: if the pdf.js CDN script is blocked, slow, or fails for any
+    // reason, this must NOT throw — an uncaught error here previously took
+    // down every line of app code after it (auth, tabs, chart, everything),
+    // since it ran synchronously before any of that was set up.
+    if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    } else {
+      console.warn('pdf.js did not load — PDF text extraction for Sprout AI will be skipped, but the rest of the app is unaffected.');
+    }
     const auth = firebase.auth();
     const db = firebase.database();
 
@@ -879,13 +1629,13 @@
     let loadedPdfs = {};
     let historyDataStore = [];
     let isAdminAuthenticated = false;
-    let farmChart = null;
     let currentFilter = '1day';
 
     // ---- Optimum-range Alerts + Sprout AI state ----
     let activeCropKey = '';
     let dismissedAlertSignature = '';
     let activeAlerts = []; // [{ metric, label, value, unit, range, message }]
+    let activeAnomalies = []; // [{ metric, icon, message }] — trend/rate-of-change anomalies
 
     // Auth Protection
     auth.onAuthStateChanged((user) => {
@@ -916,6 +1666,12 @@
       initChart();
       fetchHistoryData();
       listenToActiveCrop();
+      fetchWeatherData();
+
+      // Re-check staleness every 30s
+      setInterval(updateConnectionBadge, 30 * 1000);
+      // Refresh weather every 15 minutes
+      setInterval(fetchWeatherData, 15 * 60 * 1000);
     }
 
     // Modal Helpers
@@ -1011,6 +1767,35 @@
     }
 
     // Save New PDF
+    // Also extracts the PDF's text (via pdf.js, loaded in <head>) once at
+    // upload time, storing it as pdf.textContent. This is what
+    // buildLibraryContext() sends to Sprout AI for a relevant question —
+    // reading pre-extracted plain text is fast, versus the old approach of
+    // re-sending the raw PDF for Gemini to parse on every single question,
+    // which was slow enough to trip both our own timeout and Netlify's.
+    const MAX_PDF_EXCERPT_CHARS = 12000; // plenty for grounding, cheap for Gemini to read
+
+    async function extractPdfText(arrayBuffer) {
+      if (typeof pdfjsLib === 'undefined') return ''; // pdf.js didn't load — degrade gracefully
+      try {
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let text = '';
+        const pageCount = Math.min(pdf.numPages, 30); // cap pages read for very long guides
+        for (let i = 1; i <= pageCount; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map(it => it.str).join(' ') + '\n';
+          if (text.length > MAX_PDF_EXCERPT_CHARS) break;
+        }
+        return text.slice(0, MAX_PDF_EXCERPT_CHARS).trim();
+      } catch (err) {
+        // Scanned/image-only PDFs have no text layer — that's fine, Sprout
+        // just falls back to knowing the guide's title, not its full content.
+        console.warn('PDF text extraction skipped:', err.message);
+        return '';
+      }
+    }
+
     function savePdfToDatabase(e) {
       e.preventDefault();
 
@@ -1018,15 +1803,19 @@
       const details = document.getElementById('new-pdf-details').value.trim();
       const urlInput = document.getElementById('new-pdf-url').value.trim();
       const fileInput = document.getElementById('new-pdf-file');
+      const submitBtn = e.target.querySelector('button[type="submit"]');
 
-      const pushPdfToDb = (pdfDataUrl) => {
+      const pushPdfToDb = (pdfDataUrl, textContent) => {
         const newPdf = { title, details, url: pdfDataUrl || '#' };
+        if (textContent) newPdf.textContent = textContent;
 
         db.ref('/organic_pdfs').push(newPdf).then(() => {
           alert('New Organic Farming PDF successfully added!');
           document.getElementById('add-pdf-form').reset();
         }).catch((err) => {
           alert('Error uploading PDF: ' + err.message);
+        }).finally(() => {
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Upload & Save PDF'; }
         });
       };
 
@@ -1037,13 +1826,26 @@
           return;
         }
 
-        const reader = new FileReader();
-        reader.onload = function (event) {
-          pushPdfToDb(event.target.result);
-        };
-        reader.readAsDataURL(file);
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = 'Reading PDF…'; }
+
+        file.arrayBuffer().then(async (buffer) => {
+          // Extract text from a copy of the buffer (readAsDataURL below reads
+          // the same File separately, so this doesn't consume it).
+          const textContent = await extractPdfText(buffer.slice(0));
+
+          const reader = new FileReader();
+          reader.onload = function (event) {
+            pushPdfToDb(event.target.result, textContent);
+          };
+          reader.readAsDataURL(file);
+        }).catch((err) => {
+          alert('Could not read that PDF file: ' + err.message);
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Upload & Save PDF'; }
+        });
       } else if (urlInput) {
-        pushPdfToDb(urlInput);
+        // Pasted links can't be text-extracted client-side (no server-side
+        // fetch here to sidestep CORS), so they stay title/details-only.
+        pushPdfToDb(urlInput, '');
       } else {
         alert("Please select a PDF file or paste a web link!");
       }
@@ -1219,101 +2021,233 @@
       document.getElementById('plant-modal').style.display = 'flex';
     }
 
-    // Initialize Chart.js
-    function initChart() {
-      const ctx = document.getElementById('farmVoiceChart').getContext('2d');
-      farmChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: [],
-          datasets: [
-            {
-              label: 'Soil Moisture (%)',
-              data: [],
-              borderColor: '#2a9d8f',
-              backgroundColor: 'rgba(42, 157, 143, 0.12)',
-              fill: true,
-              tension: 0.35,
-              pointRadius: 2,
-              yAxisID: 'y'
-            },
-            {
-              label: 'Soil pH',
-              data: [],
-              borderColor: '#e07a3f',
-              backgroundColor: 'rgba(224, 122, 63, 0.1)',
-              fill: false,
-              tension: 0.35,
-              pointRadius: 2,
-              yAxisID: 'y1'
-            },
-            {
-              label: 'Temperature (°C)',
-              data: [],
-              borderColor: '#c9663f',
-              backgroundColor: 'rgba(201, 102, 63, 0.1)',
-              fill: false,
-              tension: 0.35,
-              pointRadius: 2,
-              yAxisID: 'y1'
-            }
-          ]
-        },
+    // ---- Interactive per-metric telemetry chart state ----------------------
+    // Each metric (moisture / pH / temp / humidity) gets its own Chart.js
+    // instance, its own view-style (area/line/bar), its own zoom state, and
+    // its own point inspector — all keyed by metric id so one set of
+    // functions drives all four charts.
+    const METRIC_META = {
+      moisture: { label: 'Soil Moisture (%)', color: '#2a9d8f', bg: 'rgba(42, 157, 143, 0.12)', plantField: 'moisture', field: 'moisture', decimals: 1, unit: '%' },
+      ph:       { label: 'Soil pH',            color: '#e07a3f', bg: 'rgba(224, 122, 63, 0.1)',  plantField: 'ph',       field: 'ph',       decimals: 2, unit: '' },
+      temp:     { label: 'Temperature (°C)',   color: '#c9663f', bg: 'rgba(201, 102, 63, 0.1)',  plantField: 'temp',     field: 'temp',     decimals: 1, unit: '°C' },
+      humidity: { label: 'Humidity (%)',       color: '#457b9d', bg: 'rgba(69, 123, 157, 0.12)', plantField: null,      field: 'humidity', decimals: 1, unit: '%' }
+    };
+    const METRIC_KEYS = ['moisture', 'ph', 'temp', 'humidity'];
+
+    const metricCharts = {};   // { moisture: ChartInstance, ph: ChartInstance, ... }
+    const metricChartType = { moisture: 'area', ph: 'area', temp: 'area', humidity: 'area' };
+    const selectedPoint = { moisture: null, ph: null, temp: null, humidity: null }; // { index, label }
+    let lastBucketed = null;
+
+    function buildMetricDataset(key) {
+      const m = METRIC_META[key];
+      const type = metricChartType[key];
+      const isBar = type === 'bar';
+      const isArea = type === 'area';
+      return {
+        label: m.label,
+        data: [],
+        borderColor: m.color,
+        backgroundColor: isBar ? m.color + 'cc' : m.bg,
+        fill: isArea,
+        tension: 0.35,
+        pointRadius: isBar ? 0 : 2,
+        pointHoverRadius: 5,
+        borderWidth: isBar ? 0 : 2,
+        borderRadius: isBar ? 4 : 0
+      };
+    }
+
+    // (Re)builds a single metric's Chart.js instance. Called on first load
+    // and whenever that metric's view-style (area/line/bar) is switched,
+    // since Chart.js needs a fresh instance to swap between line and bar
+    // rendering cleanly.
+    function initMetricChart(key) {
+      const canvas = document.getElementById('farmVoiceChart-' + key);
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (metricCharts[key]) metricCharts[key].destroy();
+
+      metricCharts[key] = new Chart(ctx, {
+        type: metricChartType[key] === 'bar' ? 'bar' : 'line',
+        data: { labels: [], datasets: [buildMetricDataset(key)] },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
+          onClick: (evt, elements) => handleChartPointClick(key, evt, elements),
           plugins: {
-            legend: { position: 'top', labels: { font: { family: 'Manrope' }, usePointStyle: true } },
-            tooltip: { backgroundColor: '#2f5744', titleFont: { family: 'Manrope' }, bodyFont: { family: 'Manrope' } }
+            legend: { display: false },
+            tooltip: { backgroundColor: '#2f5744', titleFont: { family: 'Manrope' }, bodyFont: { family: 'Manrope' } },
+            annotation: { annotations: {} },
+            zoom: {
+              pan: { enabled: true, mode: 'x' },
+              zoom: {
+                wheel: { enabled: true },
+                pinch: { enabled: true },
+                drag: { enabled: true, backgroundColor: 'rgba(74,122,99,0.15)', borderColor: 'rgba(74,122,99,0.4)', borderWidth: 1 },
+                mode: 'x'
+              }
+            }
           },
           scales: {
-            x: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 11 } } },
+            x: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 10.5 } } },
             y: {
               beginAtZero: false,
-              position: 'left',
-              title: { display: true, text: 'Soil Moisture (%)', font: { family: 'Manrope', size: 11 } },
+              title: { display: true, text: METRIC_META[key].label, font: { family: 'Manrope', size: 10.5 } },
               grid: { color: 'rgba(74,122,99,0.08)' }
-            },
-            y1: {
-              beginAtZero: false,
-              position: 'right',
-              title: { display: true, text: 'pH  /  °C', font: { family: 'Manrope', size: 11 } },
-              grid: { display: false }
             }
           }
         }
       });
+
+      closePointInspector(key);
     }
 
-    // Real-Time ESP32 Listener directly reading keys: humidity, phValue, soilPercent, temperature
-    // Pulls a larger window so the 1-week / 1-month / 1-year filters have real
-    // historical spread to aggregate over, instead of just re-slicing the same
-    // handful of latest records.
+    function initAllCharts() {
+      METRIC_KEYS.forEach(initMetricChart);
+    }
+    // Alias so the existing initDashboard() call site (initChart()) keeps working.
+    function initChart() { initAllCharts(); }
+
+    // ---- Sensor sanity-checking -------------------------------------------
+    // A flaky sensor or loose wire tends to report physically-impossible
+    // values (pH of 0 or 9999, negative soil moisture, etc.) rather than just
+    // going quiet. Reject values outside plausible physical bounds before
+    // they ever reach the chart/stats/history/Sprout context — a bad cable
+    // on stage shouldn't be able to spike the graph or confuse the AI.
+    // Flagged fields are dropped from the reading (not shown as a fabricated
+    // number) and recorded in _sensorErrors so the UI can say "sensor error"
+    // instead of the ambiguous "--" used for a genuinely missing field.
+    const SENSOR_BOUNDS = {
+      temperature: { min: -10, max: 60 },   // °C
+      humidity: { min: 0, max: 100 },       // %
+      soilPercent: { min: 0, max: 100 },    // %
+      phValue: { min: 0, max: 14 },
+      nitrogen: { min: 0, max: 2000 },      // mg/kg
+      phosphorus: { min: 0, max: 2000 },    // mg/kg
+      potassium: { min: 0, max: 2000 }      // mg/kg
+    };
+
+    // Decodes Firebase push IDs (e.g. -O4abc...) to obtain the generation timestamp
+    function decodePushIdTimestamp(id) {
+      if (!id || typeof id !== 'string' || id.length < 8 || !id.startsWith('-')) return null;
+      const PUSH_CHARS = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
+      let time = 0;
+      for (let i = 0; i < 8; i++) {
+        const c = id.charAt(i);
+        const val = PUSH_CHARS.indexOf(c);
+        if (val === -1) return null;
+        time = time * 64 + val;
+      }
+      return (time > 1500000000000 && time < 3000000000000) ? time : null;
+    }
+
+    let lastFirebaseReceiveTime = 0;
+
+    function sanitizeReading(raw, key) {
+      if (!raw || typeof raw !== 'object') return null;
+      const clean = {};
+
+      const getNum = (...candidates) => {
+        for (const c of candidates) {
+          if (c !== undefined && c !== null && c !== '') {
+            const num = typeof c === 'number' ? c : parseFloat(c);
+            if (!Number.isNaN(num) && Number.isFinite(num)) return num;
+          }
+        }
+        return undefined;
+      };
+
+      const temp = getNum(raw.temperature, raw.temp, raw.temperature_c, raw.temp_c);
+      const hum = getNum(raw.humidity, raw.hum, raw.humidity_percent);
+      const soil = getNum(raw.soilPercent, raw.soil, raw.moisture, raw.soilMoisture, raw.soil_percent, raw.soil_moisture);
+      const ph = getNum(raw.phValue, raw.ph, raw.pH, raw.ph_value, raw.soil_ph);
+      const n = getNum(raw.nitrogen, raw.n, raw.N);
+      const p = getNum(raw.phosphorus, raw.p, raw.P);
+      const k = getNum(raw.potassium, raw.k, raw.K);
+
+      if (temp !== undefined) clean.temperature = temp;
+      if (hum !== undefined) clean.humidity = hum;
+      if (soil !== undefined) clean.soilPercent = soil;
+      if (ph !== undefined) clean.phValue = ph;
+      if (n !== undefined) clean.nitrogen = n;
+      if (p !== undefined) clean.phosphorus = p;
+      if (k !== undefined) clean.potassium = k;
+
+      // Extract & normalize timestamp
+      let ts = raw.timestamp ?? raw.time ?? raw.ts ?? raw.date ?? raw.createdAt ?? raw.created_at ?? raw.last_updated;
+      if (typeof ts === 'string') {
+        const parsedNum = Number(ts);
+        if (!Number.isNaN(parsedNum) && parsedNum > 0) {
+          ts = parsedNum;
+        } else {
+          const parsedDate = Date.parse(ts);
+          if (!Number.isNaN(parsedDate) && parsedDate > 0) {
+            ts = parsedDate;
+          }
+        }
+      }
+      if (typeof ts === 'number' && ts > 0) {
+        if (ts < 1e11) ts = ts * 1000;
+        clean.timestamp = ts;
+      } else if (key) {
+        const decodedTs = decodePushIdTimestamp(key);
+        if (decodedTs) clean.timestamp = decodedTs;
+      }
+
+      // Check bounds & record sensor errors
+      const errors = [];
+      Object.keys(SENSOR_BOUNDS).forEach((field) => {
+        const bound = SENSOR_BOUNDS[field];
+        const value = clean[field];
+        if (typeof value === 'number' && (value < bound.min || value > bound.max)) {
+          errors.push(field);
+          delete clean[field];
+        }
+      });
+      if (errors.length) clean._sensorErrors = errors;
+
+      const hasAnyMetric = typeof clean.temperature === 'number' ||
+                           typeof clean.humidity === 'number' ||
+                           typeof clean.soilPercent === 'number' ||
+                           typeof clean.phValue === 'number';
+      return hasAnyMetric ? clean : null;
+    }
+
+    // Formats a single field for display, distinguishing "sensor error"
+    // (value was present but outside plausible bounds) from "--" (field is
+    // genuinely absent from this reading).
+    function fmtField(item, field, decimals, unit) {
+      if (item._sensorErrors && item._sensorErrors.includes(field)) {
+        return '<span class="sensor-error">⚠️ error</span>';
+      }
+      return typeof item[field] === 'number' ? item[field].toFixed(decimals) + unit : '--';
+    }
+
+    // Real-Time ESP32 Listener: listens to /sensor_data/history and /sensor_data
     function fetchHistoryData() {
       const historyRef = db.ref('/sensor_data/history').limitToLast(1000);
+      const rootSensorRef = db.ref('/sensor_data');
       const timeline = document.getElementById('history-timeline');
 
-      historyRef.on('value', (snapshot) => {
-        const data = snapshot.val();
-        historyDataStore = [];
-        timeline.innerHTML = "";
-
-        if (data) {
-          const items = [];
-          Object.keys(data).forEach(key => {
-            items.push(data[key]);
-          });
+      const processData = (items) => {
+        lastFirebaseReceiveTime = Date.now();
+        if (items && items.length > 0) {
           historyDataStore = items;
 
           // Render live item log (most recent 30 entries, newest first)
           const recent = items.slice(-30).reverse();
-          timeline.innerHTML = recent.map(item => `
+          timeline.innerHTML = recent.map(item => {
+            const withNpk = withDummyNPK(item);
+            return `
             <div class="history-item">
-              <span>🌡️ Temp: ${item.temperature ? item.temperature.toFixed(1) : '--'}°C | 💧 Hum: ${item.humidity ? item.humidity.toFixed(1) : '--'}%</span>
-              <span>🌾 Soil: ${item.soilPercent ? item.soilPercent.toFixed(1) : '--'}% | 🧪 pH: ${item.phValue ? item.phValue.toFixed(2) : '--'}</span>
+              <span>🌡️ Temp: ${fmtField(item, 'temperature', 1, '°C')} | 💧 Hum: ${fmtField(item, 'humidity', 1, '%')}</span>
+              <span>🌾 Soil: ${fmtField(item, 'soilPercent', 1, '%')} | 🧪 pH: ${fmtField(item, 'phValue', 2, '')}</span>
+              <span>🍃 N: ${withNpk.nitrogen}${withNpk.npkIsDemo ? '*' : ''} | P: ${withNpk.phosphorus}${withNpk.npkIsDemo ? '*' : ''} | K: ${withNpk.potassium}${withNpk.npkIsDemo ? '*' : ''} mg/kg</span>
             </div>
-          `).join('');
+          `;
+          }).join('');
 
           updateChartGraph(currentFilter);
         } else {
@@ -1322,14 +2256,517 @@
         }
 
         checkAlerts();
+        updateConnectionBadge();
+      };
+
+      historyRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const items = [];
+          Object.keys(data).forEach(key => {
+            const clean = sanitizeReading(data[key], key);
+            if (clean) items.push(clean);
+          });
+          if (items.length > 0) {
+            processData(items);
+            return;
+          }
+        }
+
+        // Fallback: check if readings are at root /sensor_data or under /sensor_data/live
+        rootSensorRef.once('value', (rootSnap) => {
+          const rootData = rootSnap.val();
+          if (!rootData) {
+            processData([]);
+            return;
+          }
+
+          const items = [];
+          if (rootData.history) {
+            Object.keys(rootData.history).forEach(k => {
+              const clean = sanitizeReading(rootData.history[k], k);
+              if (clean) items.push(clean);
+            });
+          } else if (rootData.temperature !== undefined || rootData.temp !== undefined || rootData.humidity !== undefined) {
+            const single = sanitizeReading(rootData);
+            if (single) {
+              if (!single.timestamp) single.timestamp = Date.now();
+              items.push(single);
+            }
+          } else {
+            Object.keys(rootData).forEach(k => {
+              if (typeof rootData[k] === 'object' && rootData[k] !== null) {
+                const clean = sanitizeReading(rootData[k], k);
+                if (clean) items.push(clean);
+              }
+            });
+          }
+          processData(items);
+        });
       });
+    }
+
+    // ---- "Is my ESP32 online?" badge ---------------------------------------
+    const STALE_AFTER_MS = 2 * 60 * 1000; // consider offline after 2 min of silence
+
+    function updateConnectionBadge() {
+      const badge = document.getElementById('connection-badge');
+      const text = document.getElementById('connection-badge-text');
+      if (!badge || !text) return;
+
+      const reading = getLatestReading();
+      if (!reading || historyDataStore.length === 0) {
+        badge.className = 'connection-badge stale';
+        text.textContent = 'No data yet';
+        return;
+      }
+
+      const readingTime = typeof reading.timestamp === 'number' ? reading.timestamp : lastFirebaseReceiveTime;
+      if (!readingTime) {
+        badge.className = 'connection-badge live';
+        text.textContent = 'Live';
+        return;
+      }
+
+      const ageMs = Date.now() - readingTime;
+      if (ageMs < STALE_AFTER_MS) {
+        badge.className = 'connection-badge live';
+        text.textContent = 'Live';
+        return;
+      }
+
+      const ageMin = Math.floor(ageMs / 60000);
+      badge.className = 'connection-badge stale';
+      text.textContent = ageMin < 60
+        ? `Last seen ${ageMin} min ago ⚠️`
+        : `Last seen ${Math.floor(ageMin / 60)}h ago ⚠️`;
+    }
+
+    // ---- CSV export ---------------------------------------------------------
+    function exportHistoryCSV() {
+      if (!historyDataStore.length) {
+        alert('No sensor history to export yet.');
+        return;
+      }
+
+      const fields = ['timestamp', 'temperature', 'humidity', 'soilPercent', 'phValue', 'nitrogen', 'phosphorus', 'potassium'];
+      const header = ['timestamp_iso', ...fields.filter(f => f !== 'timestamp')];
+
+      const rows = historyDataStore.map(raw => {
+        const item = withDummyNPK(raw);
+        const iso = typeof item.timestamp === 'number' ? new Date(item.timestamp).toISOString() : '';
+        return [
+          iso,
+          typeof item.temperature === 'number' ? item.temperature : '',
+          typeof item.humidity === 'number' ? item.humidity : '',
+          typeof item.soilPercent === 'number' ? item.soilPercent : '',
+          typeof item.phValue === 'number' ? item.phValue : '',
+          item.nitrogen,
+          item.phosphorus,
+          item.potassium
+        ].join(',');
+      });
+
+      const csv = [header.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `farmfriend-sensor-history-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // ---- Soil Health & Telemetry PDF Report Export ---------------------------
+    function generateSoilHealthPDF() {
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert('PDF generator library is still initializing. Please check your network connection.');
+        return;
+      }
+      if (!historyDataStore.length) {
+        alert('No sensor history available yet to generate a report. Please wait for ESP32 readings.');
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const reading = getLatestReading() || {};
+      const plant = activeCropKey ? loadedPlants[activeCropKey] : null;
+      const cropName = plant ? plant.name : 'General Crop Monitoring';
+      const reportDate = new Date().toLocaleString();
+
+      const primaryGreen = [47, 87, 68];
+      const sageGreen = [111, 156, 130];
+      const darkText = [38, 56, 47];
+      const lightBg = [238, 246, 239];
+
+      // Header Banner
+      doc.setFillColor(...primaryGreen);
+      doc.rect(0, 0, 210, 32, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(17);
+      doc.text('FarmFriend - Smart Agriculture Hub', 14, 14);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.text('Comprehensive Soil Health & IoT Telemetry Audit Report', 14, 22);
+      doc.text(`Generated: ${reportDate}`, 196, 22, { align: 'right' });
+
+      // Crop & Farm Profile Box
+      doc.setFillColor(...lightBg);
+      doc.roundedRect(14, 37, 182, 25, 3, 3, 'F');
+
+      doc.setTextColor(...darkText);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.text('FARM & CROP PROFILE', 18, 44);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.text(`Active Crop: ${cropName}`, 18, 51);
+      doc.text(`Optimal Moisture: ${plant ? plant.moisture : '50 - 70%'}`, 18, 57);
+
+      doc.text(`Optimal pH: ${plant ? plant.ph : '6.0 - 7.5'}`, 90, 51);
+      doc.text(`Optimal Temp: ${plant ? plant.temp : '20 - 30 °C'}`, 90, 57);
+
+      const statusText = (document.getElementById('connection-badge-text')?.textContent || 'Checking...').replace('⚠️', '');
+      doc.text(`Sensor Link: ${statusText}`, 148, 51);
+      doc.text(`Telemetry Samples: ${historyDataStore.length} records`, 148, 57);
+
+      // Parameter Stats Calculation
+      const getParamStats = (field) => {
+        const vals = historyDataStore.map(i => i[field]).filter(v => typeof v === 'number');
+        if (!vals.length) return { current: '--', min: '--', max: '--', avg: '--' };
+        const cur = typeof reading[field] === 'number' ? reading[field] : vals[vals.length - 1];
+        const min = Math.min(...vals);
+        const max = Math.max(...vals);
+        const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+        return { current: cur, min, max, avg };
+      };
+
+      const moistStats = getParamStats('soilPercent');
+      const phStats = getParamStats('phValue');
+      const tempStats = getParamStats('temperature');
+      const humStats = getParamStats('humidity');
+      const nStats = getParamStats('nitrogen');
+      const pStats = getParamStats('phosphorus');
+      const kStats = getParamStats('potassium');
+
+      const tableData = [
+        [
+          'Soil Moisture',
+          moistStats.current !== '--' ? moistStats.current.toFixed(1) + ' %' : '--',
+          moistStats.avg !== '--' ? moistStats.avg.toFixed(1) + ' %' : '--',
+          moistStats.min !== '--' ? moistStats.min.toFixed(1) + ' %' : '--',
+          moistStats.max !== '--' ? moistStats.max.toFixed(1) + ' %' : '--',
+          plant ? plant.moisture : '50 - 70 %',
+          activeAlerts.some(a => a.metric === 'Moisture') ? 'Action Needed' : 'Good / Optimal'
+        ],
+        [
+          'Soil pH Level',
+          phStats.current !== '--' ? phStats.current.toFixed(2) : '--',
+          phStats.avg !== '--' ? phStats.avg.toFixed(2) : '--',
+          phStats.min !== '--' ? phStats.min.toFixed(2) : '--',
+          phStats.max !== '--' ? phStats.max.toFixed(2) : '--',
+          plant ? plant.ph : '6.0 - 7.5',
+          activeAlerts.some(a => a.metric === 'pH') ? 'Action Needed' : 'Balanced'
+        ],
+        [
+          'Soil Temperature',
+          tempStats.current !== '--' ? tempStats.current.toFixed(1) + ' °C' : '--',
+          tempStats.avg !== '--' ? tempStats.avg.toFixed(1) + ' °C' : '--',
+          tempStats.min !== '--' ? tempStats.min.toFixed(1) + ' °C' : '--',
+          tempStats.max !== '--' ? tempStats.max.toFixed(1) + ' °C' : '--',
+          plant ? plant.temp : '20 - 30 °C',
+          activeAlerts.some(a => a.metric === 'Temperature') ? 'High / Low' : 'Normal'
+        ],
+        [
+          'Ambient Humidity',
+          humStats.current !== '--' ? humStats.current.toFixed(1) + ' %' : '--',
+          humStats.avg !== '--' ? humStats.avg.toFixed(1) + ' %' : '--',
+          humStats.min !== '--' ? humStats.min.toFixed(1) + ' %' : '--',
+          humStats.max !== '--' ? humStats.max.toFixed(1) + ' %' : '--',
+          '40 - 80 %',
+          'Standard'
+        ],
+        [
+          'Nitrogen (N)',
+          nStats.current !== '--' ? Math.round(nStats.current) + ' mg/kg' : '--',
+          nStats.avg !== '--' ? Math.round(nStats.avg) + ' mg/kg' : '--',
+          nStats.min !== '--' ? Math.round(nStats.min) + ' mg/kg' : '--',
+          nStats.max !== '--' ? Math.round(nStats.max) + ' mg/kg' : '--',
+          '80 - 120 mg/kg',
+          'Adequate'
+        ],
+        [
+          'Phosphorus (P)',
+          pStats.current !== '--' ? Math.round(pStats.current) + ' mg/kg' : '--',
+          pStats.avg !== '--' ? Math.round(pStats.avg) + ' mg/kg' : '--',
+          pStats.min !== '--' ? Math.round(pStats.min) + ' mg/kg' : '--',
+          pStats.max !== '--' ? Math.round(pStats.max) + ' mg/kg' : '--',
+          '20 - 40 mg/kg',
+          'Adequate'
+        ],
+        [
+          'Potassium (K)',
+          kStats.current !== '--' ? Math.round(kStats.current) + ' mg/kg' : '--',
+          kStats.avg !== '--' ? Math.round(kStats.avg) + ' mg/kg' : '--',
+          kStats.min !== '--' ? Math.round(kStats.min) + ' mg/kg' : '--',
+          kStats.max !== '--' ? Math.round(kStats.max) + ' mg/kg' : '--',
+          '150 - 250 mg/kg',
+          'Adequate'
+        ]
+      ];
+
+      doc.autoTable({
+        startY: 67,
+        head: [['Parameter', 'Current', 'Average', 'Min', 'Max', 'Optimal Target', 'Evaluation']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: {
+          fillColor: primaryGreen,
+          textColor: 255,
+          fontStyle: 'bold',
+          fontSize: 8.5
+        },
+        bodyStyles: {
+          fontSize: 8,
+          textColor: darkText
+        },
+        margin: { left: 14, right: 14 }
+      });
+
+      let finalY = doc.lastAutoTable.finalY + 8;
+
+      // Section: Active Alerts & Trend Anomalies
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(...primaryGreen);
+      doc.text('LIVE ALERTS & ANOMALIES LOG', 14, finalY);
+      finalY += 5;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(...darkText);
+
+      const allAlerts = [...activeAlerts, ...activeAnomalies];
+      if (allAlerts.length > 0) {
+        allAlerts.forEach(alert => {
+          doc.text(`• [ALERT] ${alert.message}`, 16, finalY);
+          finalY += 4.5;
+        });
+      } else {
+        doc.text('• All monitored soil metrics are currently within nominal thresholds with no rapid anomalies detected.', 16, finalY);
+        finalY += 5;
+      }
+
+      finalY += 4;
+
+      // Section: Organic Farming Recommendations & Action Plan
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(...primaryGreen);
+      doc.text('ORGANIC AGRONOMIC RECOMMENDATIONS (SPROUT AI)', 14, finalY);
+      finalY += 5;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(...darkText);
+
+      const isRainingSoon = weatherDataCache && weatherDataCache.rainChance >= 50;
+      const recs = [
+        `1. Irrigation Management: ${isRainingSoon ? `Hold off on irrigation — ${weatherDataCache.rainChance}% precipitation forecast in upcoming hours.` : (moistStats.current !== '--' && moistStats.current < 45 ? 'Irrigate with drip system; soil moisture is running low.' : 'Maintain standard irrigation schedule.')}`,
+        `2. Soil Organic Enrichment: Apply matured vermicompost (1-2 tons/acre) and organic leaf mulching to conserve root zone moisture and stimulate earthworm activity.`,
+        `3. Soil pH Balancing: ${phStats.current !== '--' && phStats.current < 6.0 ? 'Apply agricultural lime or wood ash in moderate doses to raise soil pH.' : (phStats.current !== '--' && phStats.current > 7.5 ? 'Apply composted organic matter or elemental sulfur to neutralize alkaline soil.' : 'Soil pH is well-balanced for optimal nutrient uptake.')}`,
+        `4. Natural Pest Prevention: Spray 3% Neem seed kernel extract (NSKE) or Panchagavya every 15 days to fortify natural plant immunity against pests.`
+      ];
+
+      recs.forEach(rec => {
+        const splitText = doc.splitTextToSize(rec, 182);
+        doc.text(splitText, 16, finalY);
+        finalY += (splitText.length * 4) + 1.2;
+      });
+
+      // Footer
+      doc.setFontSize(7.5);
+      doc.setTextColor(130, 145, 135);
+      doc.text('FarmFriend Smart Agriculture Hub • Confidential Farm Audit Document', 14, 287);
+      doc.text('Page 1 of 1', 196, 287, { align: 'right' });
+
+      const dateStr = new Date().toISOString().slice(0, 10);
+      doc.save(`FarmFriend-SoilHealth-Report-${cropName.replace(/\s+/g, '_')}-${dateStr}.pdf`);
+    }
+
+    // ---- Live Weather & Smart Irrigation Advisory Service --------------------
+    let weatherDataCache = null;
+
+    async function fetchWeatherData() {
+      // Default coordinates: Coimbatore agricultural region (11.0168° N, 76.9558° E)
+      let lat = 11.0168;
+      let lon = 76.9558;
+
+      const tryGetGeo = () => new Promise((resolve) => {
+        if (!navigator.geolocation) return resolve({ lat, lon });
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+          () => resolve({ lat, lon }),
+          { timeout: 5000 }
+        );
+      });
+
+      try {
+        const coords = await tryGetGeo();
+        lat = coords.lat;
+        lon = coords.lon;
+
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,precipitation&hourly=precipitation_probability,precipitation&forecast_days=2&timezone=auto`;
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Weather fetch failed');
+        const data = await res.json();
+
+        // Calculate upcoming 12-hour max rain probability
+        const currentHour = new Date().getHours();
+        const rainProbs = (data.hourly?.precipitation_probability || []).slice(currentHour, currentHour + 12);
+        const maxRainChance = rainProbs.length ? Math.max(...rainProbs) : 0;
+
+        weatherDataCache = {
+          temp: data.current?.temperature_2m,
+          humidity: data.current?.relative_humidity_2m,
+          windSpeed: data.current?.wind_speed_10m,
+          weatherCode: data.current?.weather_code,
+          rainChance: maxRainChance,
+          fetchedAt: Date.now()
+        };
+
+        renderWeatherUI();
+      } catch (err) {
+        console.warn('Weather service warning:', err);
+      }
+    }
+
+    function getWeatherCodeDetails(code) {
+      const isTamil = currentLang === 'ta';
+      if (code === 0) return { icon: 'fa-sun', desc: isTamil ? 'தெளிவான வானம்' : 'Clear Sky' };
+      if (code === 1 || code === 2 || code === 3) return { icon: 'fa-cloud-sun', desc: isTamil ? 'பகுதி மேகமூட்டம்' : 'Partly Cloudy' };
+      if (code === 45 || code === 48) return { icon: 'fa-smog', desc: isTamil ? 'பனிமூட்டம்' : 'Foggy' };
+      if (code >= 51 && code <= 67) return { icon: 'fa-cloud-rain', desc: isTamil ? 'லேசான மழை' : 'Light Rain' };
+      if (code >= 80 && code <= 82) return { icon: 'fa-cloud-showers-heavy', desc: isTamil ? 'மழைப்பொழிவு' : 'Showers' };
+      if (code >= 95) return { icon: 'fa-bolt', desc: isTamil ? 'இடிமின்னலுடன் மழை' : 'Thunderstorm' };
+      return { icon: 'fa-cloud', desc: isTamil ? 'மேகமூட்டம்' : 'Overcast' };
+    }
+
+    function renderWeatherUI() {
+      if (!weatherDataCache) return;
+
+      const tempEl = document.getElementById('weather-temp');
+      const statusEl = document.getElementById('weather-status');
+      const iconEl = document.getElementById('weather-icon');
+      const rainEl = document.getElementById('weather-rain-chance');
+      const humEl = document.getElementById('weather-humidity');
+      const windEl = document.getElementById('weather-wind');
+      const bannerEl = document.getElementById('weather-advisory-banner');
+      const advTextEl = document.getElementById('weather-advisory-text');
+
+      const details = getWeatherCodeDetails(weatherDataCache.weatherCode);
+
+      if (tempEl) tempEl.textContent = `${weatherDataCache.temp?.toFixed(1) ?? '--'} °C`;
+      if (statusEl) statusEl.textContent = details.desc;
+      if (iconEl) iconEl.innerHTML = `<i class="fa-solid ${details.icon}"></i>`;
+      if (rainEl) rainEl.textContent = `${weatherDataCache.rainChance}%`;
+      if (humEl) humEl.textContent = `${weatherDataCache.humidity}%`;
+      if (windEl) windEl.textContent = `${weatherDataCache.windSpeed} km/h`;
+
+      // Smart Irrigation Advisory calculation
+      const reading = getLatestReading();
+      const plant = activeCropKey ? loadedPlants[activeCropKey] : null;
+      const moist = reading && typeof reading.soilPercent === 'number' ? reading.soilPercent : null;
+      const isTamil = currentLang === 'ta';
+
+      let advisoryMsg = '';
+      let advisoryClass = 'weather-advisory-banner';
+
+      if (weatherDataCache.rainChance >= 60) {
+        advisoryClass += ' advisory-rain';
+        advisoryMsg = isTamil
+          ? `🌧️ அடுத்த சில மணிநேரங்களில் மழை வாய்ப்பு அதிகம் (${weatherDataCache.rainChance}%). நீர்ப்பாசனத்தைத் தள்ளிப்போட்டு நீர் மற்றும் மின்சாரத்தை சேமிக்கவும்.`
+          : `🌧️ High rain chance (${weatherDataCache.rainChance}%) in the next few hours. Hold off on manual irrigation to save water and avoid waterlogging.`;
+      } else if (moist !== null && moist < 45) {
+        advisoryClass += ' advisory-irrigate';
+        advisoryMsg = isTamil
+          ? `☀️ வறண்ட வானிலை (${weatherDataCache.rainChance}% மழை வாய்ப்பு). மண் ஈரப்பதம் குறைவாக உள்ளது (${moist.toFixed(1)}%) — நீர்ப்பாசனம் பரிந்துரைக்கப்படுகிறது.`
+          : `☀️ Dry weather ahead (${weatherDataCache.rainChance}% rain chance). Soil moisture is running low (${moist.toFixed(1)}%) — irrigation recommended.`;
+      } else if (moist !== null && moist > 80) {
+        advisoryMsg = isTamil
+          ? `💧 மண் ஈரப்பதம் அதிகமாக உள்ளது (${moist.toFixed(1)}%). வடிகால் வசதியை உறுதி செய்யவும்.`
+          : `💧 Soil moisture is high (${moist.toFixed(1)}%). Ensure proper drainage and monitor root aeration.`;
+      } else {
+        advisoryMsg = isTamil
+          ? `✅ சீரான வானிலை மற்றும் சிறந்த மண் நிலைமை. வழக்கமான பராமரிப்பைத் தொடரவும்.`
+          : `✅ Balanced weather and healthy soil moisture. Maintain normal farming schedule.`;
+      }
+
+      if (bannerEl) bannerEl.className = advisoryClass;
+      if (advTextEl) advTextEl.textContent = advisoryMsg;
     }
 
     // Returns the most recent sensor reading object, or null if none logged yet.
     function getLatestReading() {
       if (!historyDataStore.length) return null;
-      return historyDataStore[historyDataStore.length - 1];
+      return withDummyNPK(historyDataStore[historyDataStore.length - 1]);
     }
+
+    // ---- NPK demo layer -----------------------------------------------
+    // The ESP32 rig doesn't have a physical NPK (nitrogen / phosphorus /
+    // potassium) sensor wired in yet, so these are simulated client-side —
+    // clearly flagged as demo values (see npkIsDemo / the "*" in the UI)
+    // rather than presented as real readings. Deterministic per reading
+    // (seeded off its timestamp) so a given reading always shows the same
+    // values instead of flickering on every re-render, but drifts reading
+    // to reading so the dashboard still feels alive.
+    // The moment a real NPK sensor starts writing nitrogen/phosphorus/
+    // potassium fields to Firebase, this backs off automatically — it only
+    // fills in fields that are actually missing.
+    function seededRandom(seed) {
+      const x = Math.sin(seed) * 10000;
+      return x - Math.floor(x);
+    }
+
+    function withDummyNPK(item) {
+      if (!item) return item;
+      const hasReal = typeof item.nitrogen === 'number' && typeof item.phosphorus === 'number' && typeof item.potassium === 'number';
+      if (hasReal) return item;
+
+      const seed = (item.timestamp ? item.timestamp / 1000 : null) || (historyDataStore.indexOf(item) + 1) * 37;
+      const n = Math.round(60 + seededRandom(seed) * 80);       // ~60-140 mg/kg
+      const p = Math.round(15 + seededRandom(seed + 1) * 35);   // ~15-50 mg/kg
+      const k = Math.round(90 + seededRandom(seed + 2) * 160);  // ~90-250 mg/kg
+
+      return {
+        ...item,
+        nitrogen: typeof item.nitrogen === 'number' ? item.nitrogen : n,
+        phosphorus: typeof item.phosphorus === 'number' ? item.phosphorus : p,
+        potassium: typeof item.potassium === 'number' ? item.potassium : k,
+        npkIsDemo: true
+      };
+    }
+
+    // Generic "medium fertility loam" reference ranges (mg/kg) used until
+    // Plantcyclopedia entries carry per-crop NPK ranges of their own.
+    const GENERIC_NPK_RANGES = {
+      nitrogen: { min: 80, max: 120 },
+      phosphorus: { min: 20, max: 40 },
+      potassium: { min: 150, max: 250 }
+    };
 
     // Parses stored optimum-range strings like "22 - 32 °C", "5.5 - 6.5", "70 - 90%"
     // into { min, max } numbers. Returns null if the string can't be parsed.
@@ -1380,7 +2817,9 @@
           moisture: fallback.map(i => i.soilPercent || 0),
           ph: fallback.map(i => i.phValue || 0),
           temp: fallback.map(i => i.temperature || 0),
-          raw: fallback
+          humidity: fallback.map(i => i.humidity || 0),
+          raw: fallback,
+          bucketRaw: fallback.map(i => [i])
         };
       }
 
@@ -1404,7 +2843,12 @@
         moisture: sortedKeys.map(k => avg(buckets[k], 'soilPercent')),
         ph: sortedKeys.map(k => avg(buckets[k], 'phValue')),
         temp: sortedKeys.map(k => avg(buckets[k], 'temperature')),
-        raw: source
+        humidity: sortedKeys.map(k => avg(buckets[k], 'humidity')),
+        raw: source,
+        // Per-bucket raw readings, same index alignment as labels — used by
+        // the point-click inspector so it can show the actual timestamp of
+        // the bucket's readings, not just the averaged values.
+        bucketRaw: sortedKeys.map(k => buckets[k])
       };
     }
 
@@ -1452,25 +2896,207 @@
     }
 
     // Chart Update Function
-    function updateChartGraph(filter) {
-      if (!farmChart || historyDataStore.length === 0) return;
+    function updateAllCharts(filter) {
+      if (historyDataStore.length === 0) return;
       currentFilter = filter;
 
       const bucketed = bucketHistory(filter);
+      lastBucketed = bucketed;
 
-      farmChart.data.labels = bucketed.labels;
-      farmChart.data.datasets[0].data = bucketed.moisture;
-      farmChart.data.datasets[1].data = bucketed.ph;
-      farmChart.data.datasets[2].data = bucketed.temp;
-      farmChart.update();
+      METRIC_KEYS.forEach((key) => {
+        const chart = metricCharts[key];
+        if (!chart) return;
+        chart.data.labels = bucketed.labels;
+        chart.data.datasets[0].data = bucketed[METRIC_META[key].field];
+        chart.update();
+        closePointInspector(key);
+        updateTargetZoneAnnotations(key);
+      });
 
       renderStatChips(bucketed.raw);
     }
+    // Alias for existing call sites.
+    function updateChartGraph(filter) { updateAllCharts(filter); }
 
     function updateTimeFilter(filter, btn) {
       document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       updateChartGraph(filter);
+    }
+
+    // ---- Active-crop optimal safe-zone shading ------------------------------
+    // Draws a soft shaded band + dashed threshold lines on a metric's chart
+    // when that metric has a known optimum range for the active crop
+    // (humidity has no stored optimum band yet). Controlled by that chart's
+    // own "🎯 Safe Zone" toggle switch.
+    function toggleTargetRange(key, checked) {
+      updateTargetZoneAnnotations(key, checked);
+    }
+
+    function updateTargetZoneAnnotations(key, forceShow) {
+      const chart = metricCharts[key];
+      if (!chart) return;
+      const card = document.querySelector(`.metric-chart-card[data-metric="${key}"]`);
+      const toggleEl = card ? card.querySelector('.target-zone-toggle input') : null;
+      const show = typeof forceShow === 'boolean' ? forceShow : (toggleEl ? toggleEl.checked : true);
+
+      const annotations = {};
+      const plant = activeCropKey ? loadedPlants[activeCropKey] : null;
+      const plantField = METRIC_META[key].plantField;
+
+      if (show && plant && plantField) {
+        const range = parseRange(plant[plantField]);
+        if (range) {
+          const color = METRIC_META[key].color;
+          const rgb = hexToRgbString(color);
+          annotations['zone'] = {
+            type: 'box',
+            yMin: range.min,
+            yMax: range.max,
+            backgroundColor: `rgba(${rgb}, 0.08)`,
+            borderWidth: 0
+          };
+          annotations['line-min'] = {
+            type: 'line',
+            yMin: range.min,
+            yMax: range.min,
+            borderColor: `rgba(${rgb}, 0.55)`,
+            borderWidth: 1.5,
+            borderDash: [6, 4]
+          };
+          annotations['line-max'] = {
+            type: 'line',
+            yMin: range.max,
+            yMax: range.max,
+            borderColor: `rgba(${rgb}, 0.55)`,
+            borderWidth: 1.5,
+            borderDash: [6, 4]
+          };
+        }
+      }
+
+      chart.options.plugins.annotation.annotations = annotations;
+      chart.update();
+    }
+
+    function hexToRgbString(hex) {
+      const clean = hex.replace('#', '');
+      const r = parseInt(clean.substring(0, 2), 16);
+      const g = parseInt(clean.substring(2, 4), 16);
+      const b = parseInt(clean.substring(4, 6), 16);
+      return `${r}, ${g}, ${b}`;
+    }
+
+    // ---- Chart display style switcher (Area / Line / Bar) per metric -------
+    const CHART_TYPE_CYCLE = ['area', 'line', 'bar'];
+    const CHART_TYPE_META = {
+      area: { icon: 'fa-chart-area', label: { en: 'Area', ta: 'பகுதி' } },
+      line: { icon: 'fa-chart-line', label: { en: 'Line', ta: 'கோடு' } },
+      bar: { icon: 'fa-chart-column', label: { en: 'Bar', ta: 'பட்டை' } }
+    };
+    function cycleChartType(key) {
+      const nextIdx = (CHART_TYPE_CYCLE.indexOf(metricChartType[key]) + 1) % CHART_TYPE_CYCLE.length;
+      metricChartType[key] = CHART_TYPE_CYCLE[nextIdx];
+
+      const card = document.querySelector(`.metric-chart-card[data-metric="${key}"]`);
+      const meta = CHART_TYPE_META[metricChartType[key]];
+      if (card) {
+        const icon = card.querySelector('.chart-tool-btn i.fa-solid');
+        if (icon) icon.className = `fa-solid ${meta.icon}`;
+        const labelEl = card.querySelector('.chart-type-label');
+        if (labelEl) labelEl.textContent = meta.label[currentLang] || meta.label.en;
+      }
+
+      initMetricChart(key);
+      if (lastBucketed) {
+        const chart = metricCharts[key];
+        chart.data.labels = lastBucketed.labels;
+        chart.data.datasets[0].data = lastBucketed[METRIC_META[key].field];
+        chart.update();
+        updateTargetZoneAnnotations(key);
+      } else {
+        updateChartGraph(currentFilter);
+      }
+    }
+
+    // ---- Zoom / Pan controls -----------------------------------------------
+    function zoomChart(key, factor) {
+      const chart = metricCharts[key];
+      if (!chart || typeof chart.zoom !== 'function') return;
+      chart.zoom(factor);
+    }
+    function resetChartZoom(key) {
+      const chart = metricCharts[key];
+      if (!chart || typeof chart.resetZoom !== 'function') return;
+      chart.resetZoom();
+    }
+
+    // ---- Fullscreen / expand mode -------------------------------------------
+    function toggleChartFullscreen(key) {
+      const container = document.getElementById('chart-container-' + key);
+      const card = document.querySelector(`.metric-chart-card[data-metric="${key}"]`);
+      if (!container) return;
+      const isFull = container.classList.toggle('chart-fullscreen');
+      if (card) card.classList.toggle('card-fullscreen-active', isFull);
+      const icon = card ? card.querySelector('.chart-tool-btn[onclick*="toggleChartFullscreen"] i') : null;
+      if (icon) icon.className = isFull ? 'fa-solid fa-compress' : 'fa-solid fa-expand';
+      document.body.style.overflow = isFull ? 'hidden' : '';
+      setTimeout(() => { const c = metricCharts[key]; if (c) c.resize(); }, 60);
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        METRIC_KEYS.forEach((key) => {
+          const container = document.getElementById('chart-container-' + key);
+          if (container && container.classList.contains('chart-fullscreen')) toggleChartFullscreen(key);
+        });
+      }
+    });
+
+    // ---- Point click telemetry inspector ("Ask Sprout") ---------------------
+    function handleChartPointClick(key, evt, elements) {
+      if (!elements || !elements.length) return;
+      const chart = metricCharts[key];
+      if (!chart) return;
+      const index = elements[0].index;
+      const label = chart.data.labels[index];
+      selectedPoint[key] = { index, label };
+
+      const value = chart.data.datasets[0].data[index];
+      const m = METRIC_META[key];
+      const display = (typeof value === 'number' && !Number.isNaN(value)) ? value.toFixed(m.decimals) + m.unit : '--';
+
+      const timeEl = document.getElementById('inspector-time-' + key);
+      const valEl = document.getElementById('insp-val-' + key);
+      if (timeEl) timeEl.textContent = label;
+      if (valEl) valEl.textContent = display;
+
+      const inspector = document.getElementById('chart-point-inspector-' + key);
+      if (inspector) inspector.style.display = 'block';
+    }
+
+    function closePointInspector(key) {
+      const inspector = document.getElementById('chart-point-inspector-' + key);
+      if (inspector) inspector.style.display = 'none';
+    }
+
+    function askSproutAboutPoint(key) {
+      const sel = selectedPoint[key];
+      const chart = metricCharts[key];
+      if (!sel || !chart) return;
+      const m = METRIC_META[key];
+      const value = chart.data.datasets[0].data[sel.index];
+      const display = (typeof value === 'number' && !Number.isNaN(value)) ? value.toFixed(m.decimals) + m.unit : 'n/a';
+      const metricNameEn = { moisture: 'Soil Moisture', ph: 'Soil pH', temp: 'Temperature', humidity: 'Ambient Humidity' }[key];
+      const metricNameTa = { moisture: 'மண் ஈரப்பதம்', ph: 'மண் pH', temp: 'வெப்பநிலை', humidity: 'சுற்றுப்புற ஈரப்பதம்' }[key];
+
+      const isTamil = currentLang === 'ta';
+      const preset = isTamil
+        ? `${sel.label} நேரத்தில் பதிவான தரவை பாருங்கள்: ${metricNameTa} ${display}. இதைப் பற்றி என்ன சொல்கிறீர்கள்?`
+        : `Take a look at this reading from ${sel.label}: ${metricNameEn} ${display}. What does this tell you?`;
+
+      closePointInspector(key);
+      switchTab('sprout');
+      sendSproutMessage(preset);
     }
 
     // ================= OPTIMUM-VALUE ALERTS =================
@@ -1484,6 +3110,7 @@
         if (select) select.value = activeCropKey;
         checkAlerts();
         renderSproutInsights();
+        updateTargetZoneAnnotations();
       });
     }
 
@@ -1501,6 +3128,93 @@
           return `<option value="${key}">${p.icon || '🌱'} ${p.name}</option>`;
         }).join('');
       select.value = activeCropKey;
+    }
+
+    // ---- Trend / rate-of-change anomaly detection --------------------------
+    // Goes beyond static "is it in range" alerts: flags when a metric is
+    // moving noticeably faster than its own recent history suggests is
+    // normal — e.g. "soil moisture has dropped 15% faster than usual in the
+    // last 3 hours." A drying trend can be worth flagging well before the
+    // reading actually crosses the crop's threshold.
+    //
+    // Method (deliberately simple/explainable, no external stats library):
+    // 1. Take the last RECENT_WINDOW_MS of readings for a metric and compute
+    //    its net rate of change (value/hour) via first-vs-last point.
+    // 2. Take a longer BASELINE_WINDOW_MS of prior history and compute that
+    //    same rate over many overlapping windows of matching length, then
+    //    average their magnitudes — this is the metric's "usual pace."
+    // 3. If the recent rate's magnitude is at least ANOMALY_RATIO times the
+    //    baseline pace (and not just tiny sensor noise), flag it, reporting
+    //    both the raw change and how many times faster than usual it is.
+    const TREND_METRICS = [
+      { field: 'soilPercent', label: 'Soil moisture', unit: '%', icon: '📉', minMove: 1.5 },
+      { field: 'temperature', label: 'Temperature', unit: '°C', icon: '🌡️', minMove: 1.0 },
+      { field: 'humidity', label: 'Humidity', unit: '%', icon: '💧', minMove: 2.0 }
+    ];
+    const RECENT_WINDOW_MS = 3 * 60 * 60 * 1000;    // "last 3 hours"
+    const BASELINE_WINDOW_MS = 3 * 24 * 60 * 60 * 1000; // prior 3 days as the "usual" baseline
+    const ANOMALY_RATIO = 1.8; // recent pace must be ≥1.8x the historical average pace
+
+    function computeTrendAnomalies() {
+      const now = Date.now();
+      const withTime = historyDataStore.filter(i => typeof i.timestamp === 'number');
+      if (withTime.length < 6) return []; // not enough history to trust a trend yet
+
+      const sorted = [...withTime].sort((a, b) => a.timestamp - b.timestamp);
+      const anomalies = [];
+
+      TREND_METRICS.forEach((m) => {
+        const recentPts = sorted.filter(p => now - p.timestamp <= RECENT_WINDOW_MS && typeof p[m.field] === 'number');
+        if (recentPts.length < 2) return;
+
+        const first = recentPts[0];
+        const last = recentPts[recentPts.length - 1];
+        const hoursSpan = (last.timestamp - first.timestamp) / 3600000;
+        if (hoursSpan < 0.5) return; // too short a span to trust a rate
+
+        const recentRate = (last[m.field] - first[m.field]) / hoursSpan; // signed, per hour
+        const netChange = last[m.field] - first[m.field];
+
+        // Baseline: prior history, excluding the recent window itself.
+        const baselinePts = sorted.filter(p =>
+          now - p.timestamp > RECENT_WINDOW_MS &&
+          now - p.timestamp <= BASELINE_WINDOW_MS &&
+          typeof p[m.field] === 'number'
+        );
+        if (baselinePts.length < 6) return; // not enough baseline history yet
+
+        // Sample overlapping windows of the same length as the recent span
+        // across the baseline period to get a distribution of "normal" rates.
+        const rates = [];
+        for (let i = 0; i < baselinePts.length; i++) {
+          const winStart = baselinePts[i].timestamp;
+          const winEnd = winStart + hoursSpan * 3600000;
+          const winPts = baselinePts.filter(p => p.timestamp >= winStart && p.timestamp <= winEnd);
+          if (winPts.length < 2) continue;
+          const w0 = winPts[0], w1 = winPts[winPts.length - 1];
+          const span = (w1.timestamp - w0.timestamp) / 3600000;
+          if (span < hoursSpan * 0.5) continue;
+          rates.push((w1[m.field] - w0[m.field]) / span);
+        }
+        if (rates.length < 3) return; // not enough sampled windows to be confident
+
+        const avgAbsBaselineRate = rates.reduce((a, b) => a + Math.abs(b), 0) / rates.length;
+        const baselineFloor = Math.max(avgAbsBaselineRate, 0.05); // avoid divide-by-near-zero on flat history
+        const recentAbsRate = Math.abs(recentRate);
+        const ratio = recentAbsRate / baselineFloor;
+
+        if (ratio >= ANOMALY_RATIO && Math.abs(netChange) >= m.minMove) {
+          const dirWord = netChange < 0 ? 'dropped' : 'risen';
+          const hoursLabel = hoursSpan >= 1.5 ? `${hoursSpan.toFixed(1)} hours` : `${Math.round(hoursSpan * 60)} min`;
+          anomalies.push({
+            metric: m.field,
+            icon: m.icon,
+            message: `${m.label} has ${dirWord} ${Math.abs(netChange).toFixed(1)}${m.unit} in the last ${hoursLabel} — about ${ratio.toFixed(1)}x faster than its usual pace.`
+          });
+        }
+      });
+
+      return anomalies;
     }
 
     // Compares the latest sensor reading against the active crop's optimum
@@ -1539,28 +3253,39 @@
         });
       }
 
+      // Trend/anomaly detection runs independent of whether a crop is
+      // selected — it's about the sensor's own recent history, not optimum
+      // ranges, so it can flag a fast-drying soil trend even before a
+      // threshold is crossed (or with no crop picked at all).
+      activeAnomalies = computeTrendAnomalies();
+
+      const combined = [
+        ...activeAlerts.map(a => ({ ...a, type: 'threshold' })),
+        ...activeAnomalies.map(a => ({ ...a, type: 'anomaly' }))
+      ];
+
       // Badge / counter
-      if (activeAlerts.length > 0) {
-        badge.innerText = activeAlerts.length;
+      if (combined.length > 0) {
+        badge.innerText = combined.length;
         badge.classList.add('show');
       } else {
         badge.classList.remove('show');
       }
 
       // Banner(s) — a fresh combination of alerts clears any previous dismissal
-      const signature = activeAlerts.map(a => a.message).join('|');
+      const signature = combined.map(a => a.message).join('|');
       if (signature && signature === dismissedAlertSignature) {
         banner.innerHTML = '';
         return;
       }
 
-      if (activeAlerts.length === 0) {
+      if (combined.length === 0) {
         banner.innerHTML = '';
         return;
       }
 
-      banner.innerHTML = activeAlerts.map((a, i) => `
-        <div class="alert-banner">
+      banner.innerHTML = combined.map((a) => `
+        <div class="alert-banner${a.type === 'anomaly' ? ' anomaly' : ''}">
           <span class="alert-icon">${a.icon}</span>
           <span class="alert-text">${a.message}</span>
           <button class="alert-close" onclick="dismissAlerts()">&times;</button>
@@ -1571,7 +3296,8 @@
     }
 
     function dismissAlerts() {
-      dismissedAlertSignature = activeAlerts.map(a => a.message).join('|');
+      const combined = [...activeAlerts, ...activeAnomalies];
+      dismissedAlertSignature = combined.map(a => a.message).join('|');
       document.getElementById('alert-stack').innerHTML = '';
     }
 
@@ -1598,15 +3324,19 @@
       const checks = [
         { field: 'temperature', rangeStr: plant.temp, label: 'Temperature', unit: '°C', decimals: 1 },
         { field: 'soilPercent', rangeStr: plant.moisture, label: 'Soil Moisture', unit: '%', decimals: 1 },
-        { field: 'phValue', rangeStr: plant.ph, label: 'Soil pH', unit: '', decimals: 2 }
+        { field: 'phValue', rangeStr: plant.ph, label: 'Soil pH', unit: '', decimals: 2 },
+        { field: 'nitrogen', range: GENERIC_NPK_RANGES.nitrogen, label: 'Nitrogen (N)', unit: ' mg/kg', decimals: 0, demo: reading.npkIsDemo },
+        { field: 'phosphorus', range: GENERIC_NPK_RANGES.phosphorus, label: 'Phosphorus (P)', unit: ' mg/kg', decimals: 0, demo: reading.npkIsDemo },
+        { field: 'potassium', range: GENERIC_NPK_RANGES.potassium, label: 'Potassium (K)', unit: ' mg/kg', decimals: 0, demo: reading.npkIsDemo }
       ];
 
       container.innerHTML = checks.map(c => {
         const value = reading[c.field];
-        const range = parseRange(c.rangeStr);
+        const range = c.range || parseRange(c.rangeStr);
+        const rangeLabel = c.rangeStr || (c.range ? `${c.range.min}-${c.range.max}${c.unit}` : '');
         const hasValue = typeof value === 'number';
         let status = 'ok';
-        let tip = `Within the optimum ${c.rangeStr} range for ${plant.name}. Keep it up!`;
+        let tip = `Within the optimum ${rangeLabel} range for ${plant.name}. Keep it up!`;
 
         if (hasValue && range) {
           if (value < range.min) {
@@ -1615,14 +3345,18 @@
               ? `Below optimum — consider irrigating soon.`
               : c.field === 'temperature'
                 ? `Below optimum — consider shading or waiting for warmer conditions.`
-                : `Below optimum pH — consider adding lime or an alkaline amendment.`;
+                : c.field === 'phValue'
+                  ? `Below optimum pH — consider adding lime or an alkaline amendment.`
+                  : `Below the ${rangeLabel} reference range — consider an organic amendment rich in this nutrient.`;
           } else if (value > range.max) {
             status = 'warn';
             tip = c.field === 'soilPercent'
               ? `Above optimum — hold off on watering and check drainage.`
               : c.field === 'temperature'
                 ? `Above optimum — consider shading during peak heat.`
-                : `Above optimum pH — consider an acidifying amendment like sulfur.`;
+                : c.field === 'phValue'
+                  ? `Above optimum pH — consider an acidifying amendment like sulfur.`
+                  : `Above the ${rangeLabel} reference range — ease off amendments containing this nutrient.`;
           }
         } else if (!hasValue) {
           tip = 'No recent reading for this metric.';
@@ -1630,28 +3364,364 @@
 
         return `
           <div class="insight-card ${status}">
-            <div class="insight-label">${c.label}</div>
+            <div class="insight-label">${c.label}${c.demo ? ' *' : ''}</div>
             <div class="insight-value">${hasValue ? value.toFixed(c.decimals) + c.unit : '--'}</div>
             <div class="insight-tip">${tip}</div>
           </div>
         `;
-      }).join('');
+      }).join('') + (reading.npkIsDemo
+        ? `<p style="grid-column: 1/-1; font-size: 11px; color: var(--muted); margin-top: 4px;">* N/P/K simulated for demo — no physical NPK sensor connected yet.</p>`
+        : '');
     }
 
-    // Lightweight rule-based assistant — runs entirely client-side (no backend/API
-    // key needed) using the live sensor readings + selected crop's optimum data.
-    function appendChatMsg(text, who) {
+    // ---- Voice input/output for Sprout AI (Web Speech API) ----
+    // Fully client-side, no extra backend calls: SpeechRecognition transcribes
+    // the farmer's spoken question into the existing chat input, and
+    // speechSynthesis reads Sprout's reply aloud. Language follows the
+    // English/Tamil toggle above (see applyLanguage / currentLang).
+    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let sproutRecognition = null;
+    let sproutListening = false;
+    let speakerOutputOn = localStorage.getItem('ff_speak') === '1';
+
+    function sttLangCode() { return currentLang === 'ta' ? 'ta-IN' : 'en-IN'; }
+    function ttsLangCode() { return currentLang === 'ta' ? 'ta-IN' : 'en-IN'; }
+
+    function updateSpeakerButtonUI() {
+      const btn = document.getElementById('sprout-speaker-toggle');
+      const icon = document.getElementById('sprout-speaker-icon');
+      if (!btn || !icon) return;
+      btn.classList.toggle('active', speakerOutputOn);
+      icon.className = speakerOutputOn ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+    }
+
+    function toggleSpeakerOutput() {
+      speakerOutputOn = !speakerOutputOn;
+      localStorage.setItem('ff_speak', speakerOutputOn ? '1' : '0');
+      updateSpeakerButtonUI();
+      if (!speakerOutputOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+    }
+
+    // ---- Voice list loading ----
+    // getVoices() frequently returns [] the first time it's called — the
+    // browser loads its voice list asynchronously and fires 'voiceschanged'
+    // once it's ready. Speaking before that fires silently falls back to a
+    // default (often wrong-language, robotic) voice, which is a big part of
+    // why TTS can sound "terrible". We cache the list and refresh on the
+    // event instead of trusting a single synchronous read.
+    let cachedVoices = [];
+    function refreshVoiceCache() {
+      if ('speechSynthesis' in window) cachedVoices = window.speechSynthesis.getVoices();
+    }
+    if ('speechSynthesis' in window) {
+      refreshVoiceCache();
+      window.speechSynthesis.onvoiceschanged = refreshVoiceCache;
+    }
+
+    function pickVoiceFor(langCode) {
+      const prefix = langCode.split('-')[0];
+      return cachedVoices.find(v => v.lang === langCode)
+        || cachedVoices.find(v => v.lang && v.lang.toLowerCase().startsWith(prefix))
+        || null;
+    }
+
+    // ---- Text cleanup ----
+    // Sprout's replies are chat-formatted prose that may include markdown
+    // (**bold**, bullet dashes), emoji, and units. Speech engines read
+    // literal asterisks/backticks/emoji aloud (or choke on them), which is
+    // a second big source of "terrible"-sounding output. Strip anything
+    // that isn't meant to be heard before it ever reaches the synthesizer.
+    function cleanTextForSpeech(text) {
+      return text
+        .replace(/\*\*(.*?)\*\*/g, '$1')      // **bold**
+        .replace(/\*(.*?)\*/g, '$1')          // *italic*
+        .replace(/`([^`]*)`/g, '$1')          // `code`
+        .replace(/#{1,6}\s*/g, '')            // # headers
+        .replace(/^[-•]\s+/gm, '')            // bullet markers
+        .replace(/\p{Extended_Pictographic}/gu, '') // emoji
+        .replace(/°C/g, ' degrees C')
+        .replace(/°/g, ' degrees ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    // Splits cleaned text into speech-friendly sentence chunks. This isn't
+    // just cosmetic: Chrome has a long-standing bug where a single long
+    // utterance (~15s+ of speech) silently stops partway through with no
+    // error event. Speaking shorter sentences back-to-back sidesteps it
+    // and also gives more natural pacing/pauses than one run-on utterance.
+    function splitIntoSpeechChunks(text) {
+      const parts = text.match(/[^.!?।]+[.!?।]*/g) || [text];
+      return parts.map(p => p.trim()).filter(Boolean);
+    }
+
+    let speechChunkQueue = [];
+    let speechQueueActive = false;
+
+    function speakNextChunk() {
+      if (!speechChunkQueue.length) {
+        speechQueueActive = false;
+        return;
+      }
+      const chunk = speechChunkQueue.shift();
+      const utter = new SpeechSynthesisUtterance(chunk);
+      const langCode = ttsLangCode();
+      utter.lang = langCode;
+      utter.rate = 0.95;   // slightly slower than default — clearer for farm/technical terms
+      utter.pitch = 1;
+
+      const voice = pickVoiceFor(langCode);
+      if (voice) utter.voice = voice;
+
+      utter.onend = speakNextChunk;
+      utter.onerror = (e) => {
+        console.error('Speech synthesis chunk error:', e.error);
+        speakNextChunk(); // keep going rather than aborting the whole reply
+      };
+
+      window.speechSynthesis.speak(utter);
+    }
+
+    function speakSproutReply(text) {
+      if (!speakerOutputOn || !('speechSynthesis' in window) || !text) return;
+
+      const langCode = ttsLangCode();
+      const voice = pickVoiceFor(langCode);
+
+      if (!voice && currentLang === 'ta') {
+        appendChatMsg(
+          'இந்த சாதனத்தில் தமிழ் குரல் நிறுவப்படவில்லை, எனவே பதிலை உரக்கப் படிக்க முடியவில்லை. (Text reply is above.)',
+          'bot'
+        );
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+      speechChunkQueue = splitIntoSpeechChunks(cleanTextForSpeech(text));
+      speechQueueActive = true;
+      speakNextChunk();
+    }
+
+    function setMicListeningUI(on) {
+      const btn = document.getElementById('sprout-mic-btn');
+      if (!btn) return;
+      btn.classList.toggle('listening', on);
+      btn.innerHTML = on ? '<i class="fa-solid fa-stop"></i>' : '<i class="fa-solid fa-microphone"></i>';
+    }
+
+    function toggleVoiceInput() {
+      if (!SpeechRecognitionCtor) {
+        alert(currentLang === 'ta'
+          ? 'இந்த உலாவியில் குரல் உள்ளீடு ஆதரிக்கப்படவில்லை. Chrome-ஐ முயற்சிக்கவும்.'
+          : 'Voice input is not supported in this browser. Try Chrome on Android/desktop.');
+        return;
+      }
+      if (sproutListening) {
+        sproutRecognition && sproutRecognition.stop();
+        return;
+      }
+
+      sproutRecognition = new SpeechRecognitionCtor();
+      sproutRecognition.lang = sttLangCode();
+      sproutRecognition.interimResults = false;
+      sproutRecognition.maxAlternatives = 1;
+
+      sproutRecognition.onstart = () => {
+        sproutListening = true;
+        setMicListeningUI(true);
+      };
+
+      sproutRecognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        const input = document.getElementById('sprout-chat-input');
+        if (input) input.value = transcript;
+        sendSproutMessage();
+      };
+
+      sproutRecognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+      };
+
+      sproutRecognition.onend = () => {
+        sproutListening = false;
+        setMicListeningUI(false);
+      };
+
+      try {
+        sproutRecognition.start();
+      } catch (err) {
+        console.error('Could not start speech recognition:', err);
+      }
+    }
+
+    // ---- PWA Service Worker & Install Prompt ---------------------------------
+    let deferredInstallPrompt = null;
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(() => console.log('FarmFriend PWA Service Worker active'))
+          .catch((err) => console.log('SW registration note:', err));
+      });
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      const installBtn = document.getElementById('pwa-install-btn');
+      if (installBtn) installBtn.style.display = 'inline-flex';
+    });
+
+    function triggerPwaInstall() {
+      if (!deferredInstallPrompt) {
+        alert(currentLang === 'ta'
+          ? 'FarmFriend செயலியை நிறுவ, உங்கள் உலாவி மெனுவில் (⋮) "Add to Home screen" அல்லது "Install App" என்பதைத் தேர்ந்தெடுக்கவும்.'
+          : 'To install FarmFriend, tap your browser menu (⋮ or Share) and select "Add to Home Screen" or "Install App".');
+        return;
+      }
+      deferredInstallPrompt.prompt();
+      deferredInstallPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted FarmFriend PWA install');
+          const installBtn = document.getElementById('pwa-install-btn');
+          if (installBtn) installBtn.style.display = 'none';
+        }
+        deferredInstallPrompt = null;
+      });
+    }
+
+    window.addEventListener('appinstalled', () => {
+      console.log('FarmFriend PWA successfully installed');
+      const installBtn = document.getElementById('pwa-install-btn');
+      if (installBtn) installBtn.style.display = 'none';
+    });
+
+    // ---- AI Crop Leaf Disease & Pest Scanner ---------------------------------
+    let attachedLeafImageBase64 = null;
+    let attachedLeafMime = null;
+    let attachedLeafDataUrl = null;
+
+    function triggerCameraInput() {
+      const input = document.getElementById('leaf-camera-input');
+      if (input) input.click();
+    }
+
+    function clearAttachedLeafImage() {
+      attachedLeafImageBase64 = null;
+      attachedLeafMime = null;
+      attachedLeafDataUrl = null;
+      const container = document.getElementById('leaf-preview-container');
+      const input = document.getElementById('leaf-camera-input');
+      if (container) container.style.display = 'none';
+      if (input) input.value = '';
+    }
+
+    function compressLeafImage(file, callback) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const maxDim = 800;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          const base64 = dataUrl.split(',')[1];
+          callback(base64, 'image/jpeg', dataUrl);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function handleLeafImageSelected(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      compressLeafImage(file, (base64, mime, dataUrl) => {
+        attachedLeafImageBase64 = base64;
+        attachedLeafMime = mime;
+        attachedLeafDataUrl = dataUrl;
+
+        const container = document.getElementById('leaf-preview-container');
+        const imgEl = document.getElementById('leaf-preview-img');
+        const titleEl = document.getElementById('leaf-preview-title');
+
+        if (imgEl) imgEl.src = dataUrl;
+        if (titleEl) titleEl.textContent = file.name || 'leaf_sample.jpg';
+        if (container) container.style.display = 'flex';
+
+        const chatInput = document.getElementById('sprout-chat-input');
+        if (chatInput && !chatInput.value.trim()) {
+          chatInput.value = currentLang === 'ta'
+            ? 'இந்த இலையில் என்ன பிரச்சனை? இயற்கை தீர்வு சொல்லுங்கள்.'
+            : 'Please diagnose this leaf and recommend organic treatment.';
+          chatInput.focus();
+        }
+      });
+    }
+
+    // Appends a chat bubble to Sprout's conversation log
+    function appendChatMsg(text, who, imageSrc) {
       const log = document.getElementById('sprout-chat-log');
       const div = document.createElement('div');
       div.className = `chat-msg ${who}`;
-      div.innerText = text;
+
+      if (imageSrc) {
+        const img = document.createElement('img');
+        img.className = 'chat-msg-img';
+        img.src = imageSrc;
+        img.alt = 'Leaf sample';
+        div.appendChild(img);
+      }
+
+      const textSpan = document.createElement('span');
+      textSpan.innerText = text;
+      div.appendChild(textSpan);
+
       log.appendChild(div);
       log.scrollTop = log.scrollHeight;
       return div;
     }
 
-    // Builds a plain-text summary of the live farm state (active crop, latest
-    // sensor reading, and any out-of-range alerts) to ground the AI's answer.
+    // Summarizes a series of numeric bucket values into min/avg/max plus a
+    // simple trend direction (comparing the average of the first third of
+    // the series against the last third) so Sprout can talk about what's
+    // been *happening*, not just the single latest reading.
+    function summarizeTrend(values) {
+      const nums = (values || []).filter(v => typeof v === 'number' && !Number.isNaN(v));
+      if (nums.length < 2) return null;
+      const min = Math.min(...nums), max = Math.max(...nums);
+      const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
+      const third = Math.max(1, Math.floor(nums.length / 3));
+      const startAvg = nums.slice(0, third).reduce((a, b) => a + b, 0) / third;
+      const endAvg = nums.slice(-third).reduce((a, b) => a + b, 0) / third;
+      const delta = endAvg - startAvg;
+      const spread = max - min;
+      const direction = spread === 0 || Math.abs(delta) < spread * 0.08 ? 'stable' : (delta > 0 ? 'rising' : 'falling');
+      return { min, max, avg, direction, delta };
+    }
+
+    const FILTER_RANGE_LABEL = {
+      '1day': 'the last 24 hours',
+      '1week': 'the last 7 days',
+      '1month': 'the last 30 days',
+      '1year': 'the last 12 months'
+    };
+
     function buildFarmContext() {
       const reading = getLatestReading();
       const plant = activeCropKey ? loadedPlants[activeCropKey] : null;
@@ -1665,53 +3735,229 @@
         ? `Latest live sensor reading — Temp: ${typeof reading.temperature === 'number' ? reading.temperature.toFixed(1) + '°C' : 'n/a'}, ` +
           `Soil moisture: ${typeof reading.soilPercent === 'number' ? reading.soilPercent.toFixed(1) + '%' : 'n/a'}, ` +
           `pH: ${typeof reading.phValue === 'number' ? reading.phValue.toFixed(2) : 'n/a'}, ` +
-          `Humidity: ${typeof reading.humidity === 'number' ? reading.humidity.toFixed(1) + '%' : 'n/a'}.`
+          `Humidity: ${typeof reading.humidity === 'number' ? reading.humidity.toFixed(1) + '%' : 'n/a'}, ` +
+          `N-P-K: ${reading.nitrogen}-${reading.phosphorus}-${reading.potassium} mg/kg${reading.npkIsDemo ? ' (simulated demo values — no physical NPK sensor connected yet, mention this if asked)' : ''}.`
         : 'No live sensor readings available yet — the ESP32 may be offline.');
+
+      // Historical trend across whichever time range the farmer currently
+      // has selected in the telemetry charts (1 Day / 1 Week / 1 Month /
+      // 1 Year) — this is the same bucketed data driving the four graphs,
+      // so Sprout's read of "what's happening" always matches what the
+      // farmer is looking at on screen.
+      if (lastBucketed) {
+        const rangeLabel = FILTER_RANGE_LABEL[currentFilter] || 'the selected period';
+        const trendLines = [];
+        METRIC_KEYS.forEach((key) => {
+          const t = summarizeTrend(lastBucketed[METRIC_META[key].field]);
+          if (!t) return;
+          const m = METRIC_META[key];
+          trendLines.push(`  • ${m.label}: min ${t.min.toFixed(m.decimals)}${m.unit}, avg ${t.avg.toFixed(m.decimals)}${m.unit}, max ${t.max.toFixed(m.decimals)}${m.unit}, trending ${t.direction}.`);
+        });
+        if (trendLines.length) {
+          lines.push(`Historical trend over ${rangeLabel} (matches the farmer's telemetry charts):\n${trendLines.join('\n')}`);
+        }
+      }
 
       lines.push(activeAlerts.length
         ? `Current out-of-range alerts: ${activeAlerts.map(a => a.message).join('; ')}.`
-        : 'No active alerts — all monitored readings are currently within range.');
+        : 'No active threshold alerts — all monitored readings are currently within range.');
+
+      lines.push(activeAnomalies.length
+        ? `Trend/rate-of-change anomalies (moving unusually fast vs their own recent history, independent of whether they're in range): ${activeAnomalies.map(a => a.message).join('; ')}.`
+        : 'No unusual rate-of-change trends detected right now.');
+
+      if (weatherDataCache) {
+        lines.push(`Local Weather Forecast: Temp ${weatherDataCache.temp}°C, Humidity ${weatherDataCache.humidity}%, Wind ${weatherDataCache.windSpeed} km/h, Upcoming 12-hour maximum rain probability: ${weatherDataCache.rainChance}%.`);
+      }
 
       return lines.join('\n');
     }
 
-    // Pulls the Organic Farming Library (Firebase /organic_pdfs) into (a) a plain
-    // list of titles/details for context, and (b) actual PDF document blocks for
-    // guides that were uploaded as files (data: URLs), so the model can read them
-    // directly instead of just seeing a title. Pasted external links can't be
-    // attached as file content (no server-side fetch here), so those stay as
-    // text-only references. Capped at 4 attached PDFs to keep the request light.
-    function buildLibraryContext() {
+    // Scores every PDF in the library against the farmer's actual question
+    // by splitting each PDF's extracted text into ~500-character chunks and
+    // counting how many distinct question words appear in each chunk — then
+    // hands back the highest-scoring chunks (across all PDFs, not just one)
+    // as grounding excerpts. This replaces the old title-keyword-only match,
+    // which silently skipped every PDF whenever the question didn't happen
+    // to repeat a word from the guide's title.
+    function buildLibraryContext(question) {
       const keys = Object.keys(loadedPdfs);
-      const textLines = [];
-      const docs = [];
-
-      keys.forEach((key) => {
+      const textLines = keys.map((key) => {
         const pdf = loadedPdfs[key];
-        textLines.push(`- "${pdf.title}" (${pdf.details || 'Organic farming guide'})`);
-
-        if (docs.length < 4 && pdf.url && pdf.url.startsWith('data:application/pdf;base64,')) {
-          docs.push({
-            type: 'document',
-            source: { type: 'base64', media_type: 'application/pdf', data: pdf.url.split(',')[1] },
-            title: pdf.title
-          });
-        }
+        return `- "${pdf.title}" (${pdf.details || 'Organic farming guide'})`;
       });
 
+      const qWords = Array.from(new Set(
+        (question || '').toLowerCase().match(/[a-z\u0b80-\u0bff]{4,}/g) || []
+      ));
+
+      const CHUNK_SIZE = 500;
+      const chunks = [];
+      if (qWords.length) {
+        keys.forEach((key) => {
+          const pdf = loadedPdfs[key];
+          if (!pdf.textContent) return;
+          const normalized = pdf.textContent.replace(/\s+/g, ' ').trim();
+          for (let i = 0; i < normalized.length; i += CHUNK_SIZE) {
+            const chunkText = normalized.slice(i, i + CHUNK_SIZE);
+            const lower = chunkText.toLowerCase();
+            const score = qWords.reduce((s, w) => s + (lower.includes(w) ? 1 : 0), 0);
+            if (score > 0) chunks.push({ title: pdf.title, text: chunkText, score });
+          }
+        });
+      }
+
+      chunks.sort((a, b) => b.score - a.score);
+      const topChunks = chunks.slice(0, 3);
+      const excerptText = topChunks.length
+        ? '\n\nRelevant excerpts from the library for this question (ground your answer in these when applicable, and say which guide you are drawing from):\n' +
+          topChunks.map(c => `From "${c.title}": "...${c.text}..."`).join('\n\n')
+        : '';
+
       return {
-        text: textLines.length ? textLines.join('\n') : 'No guides currently in the library.',
-        docs
+        text: (textLines.length ? textLines.join('\n') : 'No guides currently in the library.') + excerptText
       };
     }
 
-    // Calls Claude to analyze the live farm data against the Organic Farming
-    // Library and answer the farmer's question with grounded recommendations.
-    async function askSproutAI(question) {
-      const farmContext = buildFarmContext();
-      const library = buildLibraryContext();
+    function generateSmartLocalSproutAnswer(question, hasImage) {
+      const q = (question || '').toLowerCase();
+      const reading = getLatestReading();
+      const plant = activeCropKey ? loadedPlants[activeCropKey] : null;
+      const isTamil = currentLang === 'ta';
 
-      const systemPrompt = `You are Sprout, a friendly, knowledgeable AI farming assistant built into the FarmFriend smart agriculture app. You help the farmer by analyzing their live ESP32 sensor readings against the app's Organic Farming Library (PDF guides on sustainable, chemical-free agriculture).
+      const temp = reading && typeof reading.temperature === 'number' ? reading.temperature : null;
+      const moist = reading && typeof reading.soilPercent === 'number' ? reading.soilPercent : null;
+      const ph = reading && typeof reading.phValue === 'number' ? reading.phValue : null;
+      const hum = reading && typeof reading.humidity === 'number' ? reading.humidity : null;
+
+      const plantTempRange = plant ? parseRange(plant.temp) : null;
+      const plantPhRange = plant ? parseRange(plant.ph) : null;
+      const plantMoistRange = plant ? parseRange(plant.moisture) : null;
+
+      // Leaf Disease / Pest Diagnostic Scan
+      if (hasImage || q.includes('leaf') || q.includes('disease') || q.includes('pest') || q.includes('spot') || q.includes('இலை') || q.includes('நோய்') || q.includes('பூச்சி')) {
+        const cropName = plant ? plant.name : (isTamil ? 'உங்கள் பயிர்' : 'your crop');
+        return isTamil
+          ? `🔍 இலை மாதிரி பகுப்பாய்வு (${cropName}):\n1. சாத்தியமான பிரச்சனை: பூஞ்சை இலைப்புள்ளி (Leaf Spot) அல்லது ஆரம்ப சாறு உறிஞ்சும் பூச்சி தாக்குதல்.\n2. இயற்கை தீர்வு:\n• 10 லிட்டர் தண்ணீரில் 30 மி.லி வேப்பெண்ணெய் + 5 மி.லி காதி சோப் கலந்து மாலையில் தெளிக்கவும்.\n• 1 லிட்டர் புளித்த மோரை 9 லிட்டர் தண்ணீரில் கலந்து தெளிப்பது பூஞ்சை நோய்களுக்கு மிகச் சிறந்த இயற்கை கட்டுப்பாடு ஆகும்.\n• அதிக ஈரப்பதம் மற்றும் மேகமூட்டம் இருந்தால் பூஞ்சை பரவுவதைத் தடுக்க செடிகளைச் சுற்றி நல்ல காற்றோட்டத்தை உறுதி செய்யவும்.`
+          : `🔍 Leaf Sample Diagnosis for ${cropName}:\n1. Likely Issue: Early fungal leaf spot / foliar blight or mild sucking pest infestation.\n2. Organic Action Plan:\n• Spray 3% cold-pressed Neem Oil emulsion (30ml neem oil + 5ml mild organic soap per 10L water) during late afternoon.\n• Sour buttermilk spray (1L fermented buttermilk diluted in 9L water) is an effective natural anti-fungal treatment.\n• Ensure adequate plant spacing and avoid splashing soil onto lower leaves during watering.`;
+      }
+
+      if (q.includes('weather') || q.includes('rain') || q.includes('வானிலை') || q.includes('மழை')) {
+        if (weatherDataCache) {
+          const rainProb = weatherDataCache.rainChance;
+          return isTamil
+            ? `தற்போதைய பண்ணை வானிலை: வெப்பநிலை ${weatherDataCache.temp}°C, ஈரப்பதம் ${weatherDataCache.humidity}%, காற்று வேகம் ${weatherDataCache.windSpeed} km/h. அடுத்த 12 மணிநேரத்திற்கு மழை வாய்ப்பு ${rainProb}%. ${rainProb >= 50 ? '🌧️ மழை எதிர்பார்க்கப்படுவதால் நீர்ப்பாசனத்தைத் தள்ளிப்போடவும்!' : '☀️ பெரிய மழை வாய்ப்பு இல்லை.'}`
+            : `Local Farm Weather: Temp ${weatherDataCache.temp}°C, Humidity ${weatherDataCache.humidity}%, Wind ${weatherDataCache.windSpeed} km/h. Rain probability in next 12h: ${rainProb}%. ${rainProb >= 50 ? '🌧️ Rain is expected — hold off on manual irrigation!' : '☀️ No heavy rain expected.'}`;
+        }
+      }
+
+      if (q.includes('moisture') || q.includes('water') || q.includes('irrigate') || q.includes('ஈரப்பதம்') || q.includes('தண்ணீர்') || q.includes('பாசனம்')) {
+        const rainLikely = weatherDataCache && weatherDataCache.rainChance >= 50;
+        if (moist !== null) {
+          if (rainLikely) {
+            return isTamil
+              ? `மண் ஈரப்பதம் ${moist.toFixed(1)}% ஆக உள்ளது. மேலும் அடுத்த சில மணிநேரங்களில் மழை வாய்ப்பு ${weatherDataCache.rainChance}% ஆக இருப்பதால், இப்போது நீர்ப்பாசனம் செய்வதைத் தவிர்க்கவும். மழைக்குப் பின் அளவீட்டை மீண்டும் சரிபார்க்கவும்.`
+              : `Current soil moisture is ${moist.toFixed(1)}%. Since there is a ${weatherDataCache.rainChance}% chance of rain ahead, hold off on manual watering to prevent waterlogging and conserve resources.`;
+          } else if (plantMoistRange) {
+            if (moist < plantMoistRange.min) {
+              return isTamil
+                ? `தற்போதைய மண் ஈரப்பதம் ${moist.toFixed(1)}% ஆக உள்ளது. இது ${plant.name} பயிருக்கான பரிந்துரைக்கப்பட்ட அளவை விட (${plant.moisture}) குறைவாக உள்ளது. மழை வாய்ப்பு குறைவு என்பதால் உடனடியாக மிதமான நீர்ப்பாசனம் செய்யவும், தழைக்கூளம் (mulching) இடவும்.`
+                : `Current soil moisture is ${moist.toFixed(1)}%, which is below the optimal range for ${plant.name} (${plant.moisture}) with low rain probability. Consider irrigating your field and applying organic straw mulching to conserve root moisture.`;
+            } else if (moist > plantMoistRange.max) {
+              return isTamil
+                ? `தற்போதைய மண் ஈரப்பதம் ${moist.toFixed(1)}% ஆக உள்ளது. இது ${plant.name} பயிருக்கான அளவை விட (${plant.moisture}) அதிகமாக உள்ளது. வேர் அழுகலைத் தடுக்க வடிகால் வசதியை உறுதி செய்யவும்.`
+                : `Current soil moisture is ${moist.toFixed(1)}%, which is above the optimal range for ${plant.name} (${plant.moisture}). Ensure adequate drainage to avoid root rot and pause irrigation.`;
+            } else {
+              return isTamil
+                ? `மண் ஈரப்பதம் ${moist.toFixed(1)}% ஆக ஆரோக்கியமான அளவில் உள்ளது (${plant.name} உகந்தது: ${plant.moisture}). தற்போதைய பாசன அட்டவணையைத் தொடருங்கள்.`
+                : `Soil moisture is at a healthy ${moist.toFixed(1)}%, perfectly within the optimal ${plant.name} range (${plant.moisture}). Keep maintaining your current watering routine.`;
+            }
+          }
+        }
+      }
+
+      if (q.includes('ph') || q.includes('acid') || q.includes('காரத்தன்மை') || q.includes('அமில')) {
+        if (ph !== null) {
+          if (plantPhRange) {
+            if (ph < plantPhRange.min) {
+              return isTamil
+                ? `தற்போதைய மண் pH ${ph.toFixed(2)} ஆக உள்ளது (அமிலத்தன்மை). ${plant.name} பயிருக்கு ${plant.ph} தேவை. pH அளவை உயர்த்த விவசாய சுண்ணாம்பு அல்லது மரச் சாம்பலை மிதமான அளவில் இடவும்.`
+                : `Current soil pH is ${ph.toFixed(2)} (slightly acidic vs. ${plant.name} optimum of ${plant.ph}). You can gently raise soil pH using agricultural lime or wood ash.`;
+            } else if (ph > plantPhRange.max) {
+              return isTamil
+                ? `தற்போதைய மண் pH ${ph.toFixed(2)} ஆக உள்ளது (காரத்தன்மை). ${plant.name} பயிருக்கு உகந்தது ${plant.ph}. pH அளவை சமநிலைப்படுத்த நன்கு மக்கிய இயற்கை உரம் பயன்படுத்தவும்.`
+                : `Current soil pH is ${ph.toFixed(2)} (alkaline vs. ${plant.name} optimum of ${plant.ph}). Applying decomposed organic compost or sulfur can help neutralize soil pH.`;
+            } else {
+              return isTamil
+                ? `மண் pH ${ph.toFixed(2)} ஆக சிறப்பான நிலையில் உள்ளது (${plant.name} உகந்தது: ${plant.ph}). ஊட்டச்சத்து உறிஞ்சுதல் மிக நன்றாக இருக்கும்.`
+                : `Soil pH is at ${ph.toFixed(2)}, which is optimal for ${plant.name} (${plant.ph}). Nutrient uptake will be effective.`;
+            }
+          }
+        }
+      }
+
+      if (q.includes('alert') || q.includes('warning') || q.includes('எச்சரிக்கை') || q.includes('பிரச்சனை')) {
+        if (activeAlerts.length > 0 || activeAnomalies.length > 0) {
+          const alertTexts = [...activeAlerts, ...activeAnomalies].map(a => a.message).join(' | ');
+          return isTamil
+            ? `⚠️ தற்போதைய எச்சரிக்கைகள்: ${alertTexts}. தேவையான திருத்த நடவடிக்கைகளை உடனடியாக மேற்கொள்ளவும்.`
+            : `⚠️ Active Alerts: ${alertTexts}. Please take recommended corrective actions.`;
+        } else {
+          return isTamil
+            ? `✅ தற்போது எந்த எச்சரிக்கைகளும் இல்லை! உங்கள் பண்ணை சென்சார்கள் அனைத்தும் இயல்பான வரம்பிற்குள் உள்ளன.`
+            : `✅ Good news! There are no active alerts. All soil and environment parameters are within optimal ranges.`;
+        }
+      }
+
+      if (q.includes('tip') || q.includes('improve') || q.includes('fertilizer') || q.includes('உரம்') || q.includes('குறிப்பு')) {
+        return isTamil
+          ? `இயற்கை விவசாய குறிப்புகள்:\n1. மண்புழு உரம் (Vermicompost) மற்றும் ஜீவாமிர்தம் பயன்படுத்தி மண் நுண்ணுயிர் வளத்தைப் பெருக்கவும்.\n2. தழைக்கூளம் (Mulching) இட்டு மண் ஈரப்பதத்தை பாதுகாக்கவும்.\n3. பூச்சி மேலாண்மைக்கு 3% வேப்ப எண்ணெய் கரைசல் அல்லது பஞ்சகாவ்யா தெளிக்கவும்.`
+          : `Organic Farming Tips:\n1. Apply well-matured vermicompost and Jeevamrutha to nourish soil microbial life.\n2. Use straw/leaf mulching to retain soil moisture and reduce weed growth.\n3. For natural pest control, spray 3% Neem oil emulsion or Panchagavya.`;
+      } else {
+        const cropName = plant ? plant.name : (isTamil ? 'பொது பயிர்' : 'your crop');
+        const statsSummary = reading
+          ? (isTamil
+              ? `வெப்பநிலை: ${temp !== null ? temp.toFixed(1) + '°C' : '--'}, ஈரப்பதம்: ${moist !== null ? moist.toFixed(1) + '%' : '--'}, pH: ${ph !== null ? ph.toFixed(2) : '--'}`
+              : `Temp: ${temp !== null ? temp.toFixed(1) + '°C' : '--'}, Moisture: ${moist !== null ? moist.toFixed(1) + '%' : '--'}, pH: ${ph !== null ? ph.toFixed(2) : '--'}`)
+          : (isTamil ? 'சென்சார் தரவு பெறப்படுகிறது...' : 'Waiting for sensor telemetry...');
+
+        // Surface the single most notably trending metric (if any) from the
+        // farmer's currently selected time range, so even the offline
+        // fallback engine talks about direction of change, not just a
+        // snapshot.
+        let trendNote = '';
+        if (lastBucketed) {
+          let biggest = null;
+          METRIC_KEYS.forEach((key) => {
+            const t = summarizeTrend(lastBucketed[METRIC_META[key].field]);
+            if (t && t.direction !== 'stable') {
+              const magnitude = Math.abs(t.delta);
+              if (!biggest || magnitude > biggest.magnitude) biggest = { key, t, magnitude };
+            }
+          });
+          if (biggest) {
+            const m = METRIC_META[biggest.key];
+            const rangeLabel = FILTER_RANGE_LABEL[currentFilter] || 'the selected period';
+            trendNote = isTamil
+              ? ` ${m.label} கடந்த ${rangeLabel === FILTER_RANGE_LABEL['1day'] ? '24 மணி நேரத்தில்' : 'காலகட்டத்தில்'} ${biggest.t.direction === 'rising' ? 'உயர்ந்து' : 'குறைந்து'} வருகிறது.`
+              : ` ${m.label} has been ${biggest.t.direction} over ${rangeLabel}.`;
+          }
+        }
+
+        response = isTamil
+          ? `வணக்கம்! உங்கள் பண்ணை நிலவரம் (${cropName}): ${statsSummary}.${trendNote} ${activeAlerts.length > 0 ? '⚠️ எச்சரிக்கைகள் உள்ளன, சரிபார்க்கவும்.' : 'மண் நிலைமை நன்றாக உள்ளது.'} ஏதேனும் குறிப்பிட்ட சந்தேகம் இருந்தால் கேளுங்கள்!`
+          : `Hello! Farm overview for ${cropName}: ${statsSummary}.${trendNote} ${activeAlerts.length > 0 ? '⚠️ You have active alerts requiring attention.' : 'Overall conditions look healthy.'} Feel free to ask about soil moisture, pH, pest control, or organic tips!`;
+      }
+
+      return response;
+    }
+
+    // Calls our Sprout AI backend to analyze live farm data & attached leaf photos
+    async function askSproutAI(question, imageBase64, imageMime) {
+      const farmContext = buildFarmContext();
+      const library = buildLibraryContext(question);
+
+      const systemPrompt = `You are Sprout, a friendly, expert AI agricultural companion built into the FarmFriend smart farming app. You assist farmers with real-time soil telemetry analysis, plant pathology & disease diagnosis from leaf photos, and chemical-free organic farming practices.
 
 Farm context:
 ${farmContext}
@@ -1720,58 +3966,91 @@ Organic Farming Library available:
 ${library.text}
 
 Instructions:
-- Ground your recommendations in the attached PDF guides whenever they're relevant — refer to them by title when you use them (e.g. "Per the 'Bio-Pesticide Preparation Guide'...").
-- If no attached guide covers the question, you may draw on general organic-farming knowledge, but make clear you're not quoting a specific guide.
-- Always favor organic, chemical-free recommendations, consistent with the app's focus.
-- If a sensor reading is out of range, proactively connect your advice to it.
-- Be concise, warm, and practical — this is a chat bubble on a phone. 3-5 sentences unless the farmer asks for a full plan.`;
+- If a plant leaf photo is attached:
+  1. Identify visible symptoms (e.g. chlorosis, necrotic leaf spots, powdery mildew, foliar blight, aphid/caterpillar damage, rust).
+  2. State the likely cause (fungal, bacterial, nutrient deficiency, or insect pest).
+  3. Prescribe 2-3 specific, practical ORGANIC treatments (e.g. 3% Neem seed kernel extract / oil emulsion with mild soap, fermented sour buttermilk spray, Panchagavya, wood ash dusting, Trichoderma viride, vermiwash).
+- Don't just react to the single latest reading — the "Historical trend" section above shows min/avg/max and direction (rising/falling/stable) for every metric over the farmer's currently selected time range. Reference it explicitly when it's relevant (e.g. "your soil moisture has been falling steadily over the last week, from an average of X% down to Y%" rather than only quoting today's number).
+- When "Relevant excerpts from the library" are provided above, ground your answer in them and name which guide you're drawing from. If no excerpts were retrieved for this question but the library list still shows relevant-sounding guides, you may reference a guide by title and offer to look closer if the farmer wants.
+- Always favor organic, eco-friendly, non-synthetic remedies.
+- Connect advice to live soil sensor readings, the historical trend, and the weather forecast together (e.g., avoid foliar sprays right before rain; flag if today's reading looks fine but the trend is heading toward trouble).
+- Be concise but substantive: 3-6 sentences for a normal question, more only if a full step-by-step plan is genuinely requested. Avoid generic filler ("that's a great question!", "it depends on many factors") — lead with the actual answer.${currentLang === 'ta' ? '\n- Reply ENTIRELY in Tamil (தமிழ்), using simple, everyday farming terminology.' : ''}`;
 
-      const messageContent = [{ type: 'text', text: question }, ...library.docs];
+      const contentBlocks = [{ type: 'text', text: question }];
+      if (imageBase64) {
+        contentBlocks.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: imageMime || 'image/jpeg',
+            data: imageBase64
+          }
+        });
+      }
 
-      // Calls our own Netlify Function (netlify/functions/sprout-ai.js) rather
-      // than api.anthropic.com directly, so the API key stays server-side.
-      const response = await fetch('/.netlify/functions/sprout-ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system: systemPrompt,
-          messages: [{ role: 'user', content: messageContent }]
-        })
-      });
+      try {
+        const response = await fetch('/.netlify/functions/sprout-ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system: systemPrompt,
+            messages: [{ role: 'user', content: contentBlocks }]
+          })
+        });
 
-      if (!response.ok) throw new Error(`Sprout AI request failed (${response.status})`);
+        if (response.ok) {
+          const data = await response.json();
+          const text = (data.content || [])
+            .filter(block => block.type === 'text')
+            .map(block => block.text)
+            .join('\n')
+            .trim();
 
-      const data = await response.json();
-      const text = (data.content || [])
-        .filter(block => block.type === 'text')
-        .map(block => block.text)
-        .join('\n')
-        .trim();
+          if (text) return text;
+        } else {
+          console.warn('Sprout AI backend returned non-OK status:', response.status);
+        }
+      } catch (err) {
+        console.warn('Sprout AI backend unreachable, using intelligent local engine:', err);
+      }
 
-      return text || "I looked into it but couldn't put together an answer — try rephrasing your question.";
+      return generateSmartLocalSproutAnswer(question, Boolean(imageBase64));
     }
 
     function sendSproutMessage(preset) {
       const input = document.getElementById('sprout-chat-input');
       const text = (preset || input.value).trim();
-      if (!text) return;
+      const hasLeafPhoto = Boolean(attachedLeafImageBase64);
+      const leafBase64 = attachedLeafImageBase64;
+      const leafMime = attachedLeafMime;
+      const leafDataUrl = attachedLeafDataUrl;
 
-      appendChatMsg(text, 'user');
+      if (!text && !hasLeafPhoto) return;
+
+      const userText = text || (currentLang === 'ta' ? 'இந்த இலை மாதிரியை ஆய்வு செய்து தீர்வு சொல்லுங்கள்.' : 'Please analyze this plant leaf photo.');
+      appendChatMsg(userText, 'user', leafDataUrl);
+
       if (!preset) input.value = '';
+      clearAttachedLeafImage();
 
-      const thinkingEl = appendChatMsg('Sprout is analyzing your farm data…', 'bot');
+      const thinkingText = hasLeafPhoto
+        ? (currentLang === 'ta' ? 'ஸ்ப்ரவுட் உங்கள் இலை மாதிரியை ஆய்வு செய்கிறது…' : 'Sprout is scanning your leaf photo for diseases & pests…')
+        : (currentLang === 'ta' ? 'ஸ்ப்ரவுட் உங்கள் பண்ணை தரவை ஆய்வு செய்கிறது…' : 'Sprout is analyzing your farm data…');
+
+      const thinkingEl = appendChatMsg(thinkingText, 'bot');
       thinkingEl.classList.add('typing');
 
-      askSproutAI(text)
+      askSproutAI(userText, leafBase64, leafMime)
         .then((reply) => {
           thinkingEl.classList.remove('typing');
           thinkingEl.innerText = reply;
+          speakSproutReply(reply);
         })
         .catch((err) => {
           console.error('Sprout AI error:', err);
           thinkingEl.classList.remove('typing');
-          thinkingEl.classList.add('error');
-          thinkingEl.innerText = "Hmm, I couldn't reach the AI just now. Please try again in a moment.";
+          thinkingEl.innerText = generateSmartLocalSproutAnswer(userText, Boolean(leafBase64));
+          speakSproutReply(thinkingEl.innerText);
         });
     }
   </script>

@@ -1,0 +1,5 @@
+const CACHE_NAME = 'farmfriend-v1';
+const STATIC_ASSETS = ['./', './index.html', './login.html', './manifest.json', './icon-192.png', './icon-512.png'];
+self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS).catch(() => {}))); self.skipWaiting(); });
+self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((keys) => Promise.all(keys.map((k) => k !== CACHE_NAME ? caches.delete(k) : null)))); self.clients.claim(); });
+self.addEventListener('fetch', (e) => { const url = new URL(e.request.url); if (url.pathname.includes('/.netlify/') || url.hostname.includes('firebaseio.com') || url.hostname.includes('googleapis.com')) return; e.respondWith(caches.match(e.request).then((res) => res || fetch(e.request).then((netRes) => { if (netRes && netRes.status === 200 && netRes.type === 'basic') { const clone = netRes.clone(); caches.open(CACHE_NAME).then((c) => c.put(e.request, clone)); } return netRes; }).catch(() => { if (e.request.headers.get('accept')?.includes('text/html')) return caches.match('./index.html'); }))); });
