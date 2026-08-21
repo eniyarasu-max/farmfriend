@@ -18,12 +18,16 @@
   <link rel="apple-touch-icon" href="icon-192.png" />
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<<<<<<< HEAD
   <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+=======
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
 
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -380,6 +384,7 @@
     }
     .btn-export:hover { transform: translateY(-1px); background: rgba(74, 122, 99, 0.22); }
 
+<<<<<<< HEAD
     .btn-export-pdf {
       background: rgba(201, 102, 63, 0.14);
       color: var(--clay-deep);
@@ -637,6 +642,12 @@
       border-radius: 0;
     }
     .metric-chart-card.card-fullscreen-active { z-index: 9999; }
+=======
+    /* ---- Sensor sanity-check flag ---- */
+    .sensor-error { color: var(--danger); font-weight: 700; }
+
+    .chart-container { position: relative; height: 300px; width: 100%; }
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
 
     .history-timeline { margin-top: 16px; max-height: 240px; overflow-y: auto; }
 
@@ -902,6 +913,7 @@
       0%, 100% { box-shadow: 0 0 0 0 rgba(231, 135, 107, 0.5); }
       50% { box-shadow: 0 0 0 8px rgba(231, 135, 107, 0); }
     }
+<<<<<<< HEAD
     .btn-attach {
       background: rgba(74,122,99,0.14) !important; color: var(--moss-deep) !important;
       padding: 0 14px !important; border: 1px solid rgba(74,122,99,0.3) !important;
@@ -967,6 +979,8 @@
       margin-bottom: 6px;
       border: 1px solid rgba(255, 255, 255, 0.4);
     }
+=======
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
     .btn-speaker {
       background: rgba(255,255,255,0.5); color: var(--muted);
       border: 1px solid rgba(74,122,99,0.25); border-radius: 10px;
@@ -1010,12 +1024,18 @@
     </div>
     <div class="user-actions">
       <span id="user-display">Loading...</span>
+<<<<<<< HEAD
       <button class="btn-admin" id="pwa-install-btn" style="display:none;" onclick="triggerPwaInstall()" title="Install FarmFriend as an App">
         <i class="fa-solid fa-mobile-screen-button"></i> <span data-i18n="nav.install">Install App</span>
       </button>
       <button class="btn-admin" id="lang-toggle-btn" onclick="toggleLanguage()" title="Switch language / மொழியை மாற்று">
         <i class="fa-solid fa-language"></i> <span id="lang-toggle-label">தமிழ்</span>
       </button>
+=======
+      <button class="btn-admin" id="lang-toggle-btn" onclick="toggleLanguage()" title="Switch language / மொழியை மாற்று">
+        <i class="fa-solid fa-language"></i> <span id="lang-toggle-label">தமிழ்</span>
+      </button>
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
       <button class="btn-admin" id="admin-panel-btn" onclick="openAdminAuthModal()">
         <i class="fa-solid fa-user-gear"></i> <span data-i18n="nav.admin">Admin</span>
       </button>
@@ -1229,10 +1249,14 @@
       <div class="card glass">
         <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom: 12px;">
           <h3 style="margin-bottom:0;"><i class="fa-solid fa-clock-rotate-left"></i> <span data-i18n="telemetry.title">Live ESP32 Telemetry Records</span></h3>
+<<<<<<< HEAD
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="btn-export" onclick="exportHistoryCSV()"><i class="fa-solid fa-file-csv"></i> <span data-i18n="telemetry.export">Export CSV</span></button>
             <button class="btn-export btn-export-pdf" onclick="generateSoilHealthPDF()"><i class="fa-solid fa-file-pdf"></i> <span data-i18n="telemetry.exportPdf">Export Soil Report (PDF)</span></button>
           </div>
+=======
+          <button class="btn-export" onclick="exportHistoryCSV()"><i class="fa-solid fa-file-csv"></i> <span data-i18n="telemetry.export">Export CSV</span></button>
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
         </div>
         <div id="history-timeline" class="history-timeline">
           <p style="color: var(--muted);" data-i18n="telemetry.fetching">Fetching historical records from ESP32...</p>
@@ -1333,11 +1357,15 @@
           </div>
 
           <div class="sprout-chat-input-row">
+<<<<<<< HEAD
             <input type="file" id="leaf-camera-input" accept="image/*" capture="environment" style="display:none;" onchange="handleLeafImageSelected(event)" />
             <button type="button" class="btn-attach" id="sprout-camera-btn" onclick="triggerCameraInput()" title="Take Photo or Scan Leaf Disease">
               <i class="fa-solid fa-camera"></i>
             </button>
             <input type="text" id="sprout-chat-input" placeholder="Ask about temperature, moisture, pH, or leaf pests..." data-i18n-placeholder="sprout.chatPlaceholder" onkeydown="if(event.key==='Enter') sendSproutMessage()" />
+=======
+            <input type="text" id="sprout-chat-input" placeholder="Ask about temperature, moisture, pH..." data-i18n-placeholder="sprout.chatPlaceholder" onkeydown="if(event.key==='Enter') sendSproutMessage()" />
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
             <button type="button" class="btn-mic" id="sprout-mic-btn" onclick="toggleVoiceInput()" title="Speak your question">
               <i class="fa-solid fa-microphone"></i>
             </button>
@@ -1454,7 +1482,10 @@
     // Sprout AI is also told which language to reply in (see askSproutAI).
     const TRANSLATIONS = {
       en: {
+<<<<<<< HEAD
         'nav.install': 'Install App',
+=======
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
         'nav.admin': 'Admin',
         'nav.logout': 'Logout',
         'tab.farmvoice': 'FarmVoice',
@@ -1469,6 +1500,7 @@
         'time.1year': '1 Year',
         'telemetry.title': 'Live ESP32 Telemetry Records',
         'telemetry.export': 'Export CSV',
+<<<<<<< HEAD
         'telemetry.exportPdf': 'Export Soil Report (PDF)',
         'telemetry.fetching': 'Fetching historical records from ESP32...',
         'weather.title': 'Live Weather & Smart Irrigation',
@@ -1476,6 +1508,9 @@
         'weather.humidity': 'Humidity',
         'weather.wind': 'Wind Speed',
         'weather.loading': 'Fetching localized farm weather...',
+=======
+        'telemetry.fetching': 'Fetching historical records from ESP32...',
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
         'plant.title': 'Plantcyclopedia',
         'plant.subtitle': 'Crop Wisdom & Optimal Soil Conditions',
         'organic.title': 'Organic Farming Library',
@@ -1490,12 +1525,19 @@
         'sprout.chip3': 'Any alerts right now?',
         'sprout.chip4': 'Tips to improve soil',
         'sprout.chip5': 'Any unusual trends?',
+<<<<<<< HEAD
         'sprout.greeting': "Hi, I'm Sprout 🪱 Pick your crop above, ask me anything, or tap 📷 to scan a leaf photo!",
         'sprout.leafReady': '📸 Leaf photo attached for AI disease diagnosis',
         'sprout.chatPlaceholder': 'Ask about temperature, moisture, pH, or leaf pests...'
       },
       ta: {
         'nav.install': 'செயலியை நிறுவு',
+=======
+        'sprout.greeting': "Hi, I'm Sprout 🪱 Pick your crop above and ask me anything about your live soil readings!",
+        'sprout.chatPlaceholder': 'Ask about temperature, moisture, pH...'
+      },
+      ta: {
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
         'nav.admin': 'நிர்வாகி',
         'nav.logout': 'வெளியேறு',
         'tab.farmvoice': 'பண்ணை குரல்',
@@ -1510,6 +1552,7 @@
         'time.1year': '1 வருடம்',
         'telemetry.title': 'நேரடி ESP32 பதிவுகள்',
         'telemetry.export': 'CSV ஏற்றுமதி',
+<<<<<<< HEAD
         'telemetry.exportPdf': 'மண் அறிக்கை (PDF)',
         'telemetry.fetching': 'ESP32 வரலாற்றுப் பதிவுகளை பெறுகிறது...',
         'weather.title': 'நேரடி வானிலை & நுண்ணறிவு பாசனம்',
@@ -1517,6 +1560,9 @@
         'weather.humidity': 'ஈரப்பதம்',
         'weather.wind': 'காற்று வேகம்',
         'weather.loading': 'உள்ளூர் பண்ணை வானிலையைப் பெறுகிறது...',
+=======
+        'telemetry.fetching': 'ESP32 வரலாற்றுப் பதிவுகளை பெறுகிறது...',
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
         'plant.title': 'தாவர களஞ்சியம்',
         'plant.subtitle': 'பயிர் அறிவு & உகந்த மண் நிலைமைகள்',
         'organic.title': 'இயற்கை விவசாய நூலகம்',
@@ -1531,9 +1577,14 @@
         'sprout.chip3': 'இப்போது ஏதேனும் எச்சரிக்கை உள்ளதா?',
         'sprout.chip4': 'மண்ணை மேம்படுத்த குறிப்புகள்',
         'sprout.chip5': 'சமீபத்தில் ஏதேனும் மாற்றங்கள்?',
+<<<<<<< HEAD
         'sprout.greeting': 'வணக்கம், நான் ஸ்ப்ரவுட் 🪱 மேலே உங்கள் பயிரைத் தேர்ந்தெடுத்து, உங்கள் சந்தேகங்களைக் கேளுங்கள் அல்லது 📷 இலை புகைப்படத்தை ஸ்கேன் செய்யுங்கள்!',
         'sprout.leafReady': '📸 இலை புகைப்படம் AI நோயறிதலுக்கு தயாராக உள்ளது',
         'sprout.chatPlaceholder': 'வெப்பநிலை, ஈரப்பதம், pH அல்லது இலை பூச்சிகள் பற்றி கேளுங்கள்...'
+=======
+        'sprout.greeting': 'வணக்கம், நான் ஸ்ப்ரவுட் 🪱 மேலே உங்கள் பயிரைத் தேர்ந்தெடுத்து, உங்கள் நேரடி மண் அளவீடுகள் பற்றி என்னிடம் கேளுங்கள்!',
+        'sprout.chatPlaceholder': 'வெப்பநிலை, ஈரப்பதம், pH பற்றி கேளுங்கள்...'
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
       }
     };
 
@@ -1557,9 +1608,12 @@
       document.documentElement.setAttribute('lang', lang === 'ta' ? 'ta' : 'en');
 
       localStorage.setItem('ff_lang', lang);
+<<<<<<< HEAD
       if (typeof renderWeatherUI === 'function') {
         renderWeatherUI();
       }
+=======
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
     }
 
     function toggleLanguage() {
@@ -1666,12 +1720,19 @@
       initChart();
       fetchHistoryData();
       listenToActiveCrop();
+<<<<<<< HEAD
       fetchWeatherData();
 
       // Re-check staleness every 30s
       setInterval(updateConnectionBadge, 30 * 1000);
       // Refresh weather every 15 minutes
       setInterval(fetchWeatherData, 15 * 60 * 1000);
+=======
+
+      // Re-check staleness every 30s even if no new Firebase event fires —
+      // an ESP32 that's gone silent won't trigger a 'value' update on its own.
+      setInterval(updateConnectionBadge, 30 * 1000);
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
     }
 
     // Modal Helpers
@@ -2104,12 +2165,15 @@
       closePointInspector(key);
     }
 
+<<<<<<< HEAD
     function initAllCharts() {
       METRIC_KEYS.forEach(initMetricChart);
     }
     // Alias so the existing initDashboard() call site (initChart()) keeps working.
     function initChart() { initAllCharts(); }
 
+=======
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
     // ---- Sensor sanity-checking -------------------------------------------
     // A flaky sensor or loose wire tends to report physically-impossible
     // values (pH of 0 or 9999, negative soil moisture, etc.) rather than just
@@ -2129,6 +2193,7 @@
       potassium: { min: 0, max: 2000 }      // mg/kg
     };
 
+<<<<<<< HEAD
     // Decodes Firebase push IDs (e.g. -O4abc...) to obtain the generation timestamp
     function decodePushIdTimestamp(id) {
       if (!id || typeof id !== 'string' || id.length < 8 || !id.startsWith('-')) return null;
@@ -2197,22 +2262,35 @@
       }
 
       // Check bounds & record sensor errors
+=======
+    function sanitizeReading(item) {
+      if (!item) return item;
+      const clean = { ...item };
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
       const errors = [];
       Object.keys(SENSOR_BOUNDS).forEach((field) => {
         const bound = SENSOR_BOUNDS[field];
         const value = clean[field];
+<<<<<<< HEAD
         if (typeof value === 'number' && (value < bound.min || value > bound.max)) {
+=======
+        if (typeof value === 'number' && (Number.isNaN(value) || value < bound.min || value > bound.max)) {
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
           errors.push(field);
           delete clean[field];
         }
       });
       if (errors.length) clean._sensorErrors = errors;
+<<<<<<< HEAD
 
       const hasAnyMetric = typeof clean.temperature === 'number' ||
                            typeof clean.humidity === 'number' ||
                            typeof clean.soilPercent === 'number' ||
                            typeof clean.phValue === 'number';
       return hasAnyMetric ? clean : null;
+=======
+      return clean;
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
     }
 
     // Formats a single field for display, distinguishing "sensor error"
@@ -2225,15 +2303,35 @@
       return typeof item[field] === 'number' ? item[field].toFixed(decimals) + unit : '--';
     }
 
+<<<<<<< HEAD
     // Real-Time ESP32 Listener: listens to /sensor_data/history and /sensor_data
+=======
+    // Real-Time ESP32 Listener directly reading keys: humidity, phValue, soilPercent, temperature
+    // Pulls a larger window so the 1-week / 1-month / 1-year filters have real
+    // historical spread to aggregate over, instead of just re-slicing the same
+    // handful of latest records.
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
     function fetchHistoryData() {
       const historyRef = db.ref('/sensor_data/history').limitToLast(1000);
       const rootSensorRef = db.ref('/sensor_data');
       const timeline = document.getElementById('history-timeline');
 
+<<<<<<< HEAD
       const processData = (items) => {
         lastFirebaseReceiveTime = Date.now();
         if (items && items.length > 0) {
+=======
+      historyRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        historyDataStore = [];
+        timeline.innerHTML = "";
+
+        if (data) {
+          const items = [];
+          Object.keys(data).forEach(key => {
+            items.push(sanitizeReading(data[key]));
+          });
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
           historyDataStore = items;
 
           // Render live item log (most recent 30 entries, newest first)
@@ -2257,6 +2355,7 @@
 
         checkAlerts();
         updateConnectionBadge();
+<<<<<<< HEAD
       };
 
       historyRef.on('value', (snapshot) => {
@@ -2303,10 +2402,20 @@
           }
           processData(items);
         });
+=======
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
       });
     }
 
     // ---- "Is my ESP32 online?" badge ---------------------------------------
+<<<<<<< HEAD
+=======
+    // Compares the latest reading's timestamp against the current time so a
+    // disconnected device doesn't just silently keep showing its last reading
+    // with no indication it's stale. Re-checked on a timer too, since a
+    // device that goes quiet won't fire a new Firebase 'value' event to
+    // trigger a re-render on its own.
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
     const STALE_AFTER_MS = 2 * 60 * 1000; // consider offline after 2 min of silence
 
     function updateConnectionBadge() {
@@ -2315,12 +2424,17 @@
       if (!badge || !text) return;
 
       const reading = getLatestReading();
+<<<<<<< HEAD
       if (!reading || historyDataStore.length === 0) {
+=======
+      if (!reading || typeof reading.timestamp !== 'number') {
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
         badge.className = 'connection-badge stale';
         text.textContent = 'No data yet';
         return;
       }
 
+<<<<<<< HEAD
       const readingTime = typeof reading.timestamp === 'number' ? reading.timestamp : lastFirebaseReceiveTime;
       if (!readingTime) {
         badge.className = 'connection-badge live';
@@ -2329,6 +2443,9 @@
       }
 
       const ageMs = Date.now() - readingTime;
+=======
+      const ageMs = Date.now() - reading.timestamp;
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
       if (ageMs < STALE_AFTER_MS) {
         badge.className = 'connection-badge live';
         text.textContent = 'Live';
@@ -2379,6 +2496,7 @@
       URL.revokeObjectURL(url);
     }
 
+<<<<<<< HEAD
     // ---- Soil Health & Telemetry PDF Report Export ---------------------------
     function generateSoilHealthPDF() {
       if (!window.jspdf || !window.jspdf.jsPDF) {
@@ -2719,6 +2837,8 @@
       if (advTextEl) advTextEl.textContent = advisoryMsg;
     }
 
+=======
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
     // Returns the most recent sensor reading object, or null if none logged yet.
     function getLatestReading() {
       if (!historyDataStore.length) return null;
@@ -3372,6 +3492,194 @@
       }).join('') + (reading.npkIsDemo
         ? `<p style="grid-column: 1/-1; font-size: 11px; color: var(--muted); margin-top: 4px;">* N/P/K simulated for demo — no physical NPK sensor connected yet.</p>`
         : '');
+<<<<<<< HEAD
+=======
+    }
+
+    // ---- Voice input/output for Sprout AI (Web Speech API) ----
+    // Fully client-side, no extra backend calls: SpeechRecognition transcribes
+    // the farmer's spoken question into the existing chat input, and
+    // speechSynthesis reads Sprout's reply aloud. Language follows the
+    // English/Tamil toggle above (see applyLanguage / currentLang).
+    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let sproutRecognition = null;
+    let sproutListening = false;
+    let speakerOutputOn = localStorage.getItem('ff_speak') === '1';
+
+    function sttLangCode() { return currentLang === 'ta' ? 'ta-IN' : 'en-IN'; }
+    function ttsLangCode() { return currentLang === 'ta' ? 'ta-IN' : 'en-IN'; }
+
+    function updateSpeakerButtonUI() {
+      const btn = document.getElementById('sprout-speaker-toggle');
+      const icon = document.getElementById('sprout-speaker-icon');
+      if (!btn || !icon) return;
+      btn.classList.toggle('active', speakerOutputOn);
+      icon.className = speakerOutputOn ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+    }
+
+    function toggleSpeakerOutput() {
+      speakerOutputOn = !speakerOutputOn;
+      localStorage.setItem('ff_speak', speakerOutputOn ? '1' : '0');
+      updateSpeakerButtonUI();
+      if (!speakerOutputOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+    }
+
+    // ---- Voice list loading ----
+    // getVoices() frequently returns [] the first time it's called — the
+    // browser loads its voice list asynchronously and fires 'voiceschanged'
+    // once it's ready. Speaking before that fires silently falls back to a
+    // default (often wrong-language, robotic) voice, which is a big part of
+    // why TTS can sound "terrible". We cache the list and refresh on the
+    // event instead of trusting a single synchronous read.
+    let cachedVoices = [];
+    function refreshVoiceCache() {
+      if ('speechSynthesis' in window) cachedVoices = window.speechSynthesis.getVoices();
+    }
+    if ('speechSynthesis' in window) {
+      refreshVoiceCache();
+      window.speechSynthesis.onvoiceschanged = refreshVoiceCache;
+    }
+
+    function pickVoiceFor(langCode) {
+      const prefix = langCode.split('-')[0];
+      return cachedVoices.find(v => v.lang === langCode)
+        || cachedVoices.find(v => v.lang && v.lang.toLowerCase().startsWith(prefix))
+        || null;
+    }
+
+    // ---- Text cleanup ----
+    // Sprout's replies are chat-formatted prose that may include markdown
+    // (**bold**, bullet dashes), emoji, and units. Speech engines read
+    // literal asterisks/backticks/emoji aloud (or choke on them), which is
+    // a second big source of "terrible"-sounding output. Strip anything
+    // that isn't meant to be heard before it ever reaches the synthesizer.
+    function cleanTextForSpeech(text) {
+      return text
+        .replace(/\*\*(.*?)\*\*/g, '$1')      // **bold**
+        .replace(/\*(.*?)\*/g, '$1')          // *italic*
+        .replace(/`([^`]*)`/g, '$1')          // `code`
+        .replace(/#{1,6}\s*/g, '')            // # headers
+        .replace(/^[-•]\s+/gm, '')            // bullet markers
+        .replace(/\p{Extended_Pictographic}/gu, '') // emoji
+        .replace(/°C/g, ' degrees C')
+        .replace(/°/g, ' degrees ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    // Splits cleaned text into speech-friendly sentence chunks. This isn't
+    // just cosmetic: Chrome has a long-standing bug where a single long
+    // utterance (~15s+ of speech) silently stops partway through with no
+    // error event. Speaking shorter sentences back-to-back sidesteps it
+    // and also gives more natural pacing/pauses than one run-on utterance.
+    function splitIntoSpeechChunks(text) {
+      const parts = text.match(/[^.!?।]+[.!?।]*/g) || [text];
+      return parts.map(p => p.trim()).filter(Boolean);
+    }
+
+    let speechChunkQueue = [];
+    let speechQueueActive = false;
+
+    function speakNextChunk() {
+      if (!speechChunkQueue.length) {
+        speechQueueActive = false;
+        return;
+      }
+      const chunk = speechChunkQueue.shift();
+      const utter = new SpeechSynthesisUtterance(chunk);
+      const langCode = ttsLangCode();
+      utter.lang = langCode;
+      utter.rate = 0.95;   // slightly slower than default — clearer for farm/technical terms
+      utter.pitch = 1;
+
+      const voice = pickVoiceFor(langCode);
+      if (voice) utter.voice = voice;
+
+      utter.onend = speakNextChunk;
+      utter.onerror = (e) => {
+        console.error('Speech synthesis chunk error:', e.error);
+        speakNextChunk(); // keep going rather than aborting the whole reply
+      };
+
+      window.speechSynthesis.speak(utter);
+    }
+
+    function speakSproutReply(text) {
+      if (!speakerOutputOn || !('speechSynthesis' in window) || !text) return;
+
+      const langCode = ttsLangCode();
+      const voice = pickVoiceFor(langCode);
+
+      // Being honest here matters: if there's no Tamil voice installed on
+      // this device, falling back to an English voice would read Tamil
+      // script with English phonemes — that's the "terrible" experience,
+      // not an improvement over saying nothing. Skip audio and say so once
+      // via a chat note instead of forcing garbled speech.
+      if (!voice && currentLang === 'ta') {
+        appendChatMsg(
+          'இந்த சாதனத்தில் தமிழ் குரல் நிறுவப்படவில்லை, எனவே பதிலை உரக்கப் படிக்க முடியவில்லை. (Text reply is above.)',
+          'bot'
+        );
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+      speechChunkQueue = splitIntoSpeechChunks(cleanTextForSpeech(text));
+      speechQueueActive = true;
+      speakNextChunk();
+    }
+
+    function setMicListeningUI(on) {
+      const btn = document.getElementById('sprout-mic-btn');
+      if (!btn) return;
+      btn.classList.toggle('listening', on);
+      btn.innerHTML = on ? '<i class="fa-solid fa-stop"></i>' : '<i class="fa-solid fa-microphone"></i>';
+    }
+
+    function toggleVoiceInput() {
+      if (!SpeechRecognitionCtor) {
+        alert(currentLang === 'ta'
+          ? 'இந்த உலாவியில் குரல் உள்ளீடு ஆதரிக்கப்படவில்லை. Chrome-ஐ முயற்சிக்கவும்.'
+          : 'Voice input is not supported in this browser. Try Chrome on Android/desktop.');
+        return;
+      }
+      if (sproutListening) {
+        sproutRecognition && sproutRecognition.stop();
+        return;
+      }
+
+      sproutRecognition = new SpeechRecognitionCtor();
+      sproutRecognition.lang = sttLangCode();
+      sproutRecognition.interimResults = false;
+      sproutRecognition.maxAlternatives = 1;
+
+      sproutRecognition.onstart = () => {
+        sproutListening = true;
+        setMicListeningUI(true);
+      };
+
+      sproutRecognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        const input = document.getElementById('sprout-chat-input');
+        if (input) input.value = transcript;
+        sendSproutMessage(); // auto-send, same as pressing Enter
+      };
+
+      sproutRecognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+      };
+
+      sproutRecognition.onend = () => {
+        sproutListening = false;
+        setMicListeningUI(false);
+      };
+
+      try {
+        sproutRecognition.start();
+      } catch (err) {
+        console.error('Could not start speech recognition:', err);
+      }
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
     }
 
     // ---- Voice input/output for Sprout AI (Web Speech API) ----
@@ -3765,14 +4073,18 @@
       lines.push(activeAnomalies.length
         ? `Trend/rate-of-change anomalies (moving unusually fast vs their own recent history, independent of whether they're in range): ${activeAnomalies.map(a => a.message).join('; ')}.`
         : 'No unusual rate-of-change trends detected right now.');
+<<<<<<< HEAD
 
       if (weatherDataCache) {
         lines.push(`Local Weather Forecast: Temp ${weatherDataCache.temp}°C, Humidity ${weatherDataCache.humidity}%, Wind ${weatherDataCache.windSpeed} km/h, Upcoming 12-hour maximum rain probability: ${weatherDataCache.rainChance}%.`);
       }
+=======
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
 
       return lines.join('\n');
     }
 
+<<<<<<< HEAD
     // Scores every PDF in the library against the farmer's actual question
     // by splitting each PDF's extracted text into ~500-character chunks and
     // counting how many distinct question words appear in each chunk — then
@@ -3785,6 +4097,42 @@
       const textLines = keys.map((key) => {
         const pdf = loadedPdfs[key];
         return `- "${pdf.title}" (${pdf.details || 'Organic farming guide'})`;
+=======
+    // Pulls the Organic Farming Library (Firebase /organic_pdfs) into (a) a plain
+    // list of titles/details for context — always included, so Sprout can
+    // mention any guide by name — and (b) the actual PDF bytes, but ONLY for
+    // a guide the question appears to name, capped to one attachment.
+    // Attaching every uploaded PDF to every message (even "hi") was pushing
+    // requests past Gemini's response time and Netlify's function timeout;
+    // attaching on-demand keeps normal chat messages small and fast while
+    // still letting the farmer ask "what does the Bio-Pesticide guide say?"
+    // and get an answer grounded in the real file.
+    //
+    // NOTE: this used to attach the raw PDF bytes for Gemini to read live,
+    // which was slow enough (multimodal PDF parsing) to blow past both our
+    // own abort budget and Netlify's function timeout on guide-specific
+    // questions. Guides are now text-extracted once at upload time
+    // (see savePdfToDatabase's pdf.js step) and stored as pdf.textContent —
+    // reusing that here is dramatically faster since Gemini is just reading
+    // plain text, not parsing a document.
+    function buildLibraryContext(question) {
+      const keys = Object.keys(loadedPdfs);
+      const textLines = [];
+      let relevantExcerpt = '';
+      const q = (question || '').toLowerCase();
+
+      keys.forEach((key) => {
+        const pdf = loadedPdfs[key];
+        textLines.push(`- "${pdf.title}" (${pdf.details || 'Organic farming guide'})`);
+
+        if (relevantExcerpt || !pdf.textContent) return; // at most one guide's text per message
+
+        const titleWords = pdf.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+        const isRelevant = titleWords.some(w => q.includes(w));
+        if (!isRelevant) return;
+
+        relevantExcerpt = `\n\nFull excerpt from "${pdf.title}":\n${pdf.textContent}`;
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
       });
 
       const qWords = Array.from(new Set(
@@ -3815,6 +4163,7 @@
         : '';
 
       return {
+<<<<<<< HEAD
         text: (textLines.length ? textLines.join('\n') : 'No guides currently in the library.') + excerptText
       };
     }
@@ -3824,6 +4173,18 @@
       const reading = getLatestReading();
       const plant = activeCropKey ? loadedPlants[activeCropKey] : null;
       const isTamil = currentLang === 'ta';
+=======
+        text: (textLines.length ? textLines.join('\n') : 'No guides currently in the library.') + relevantExcerpt
+      };
+    }
+
+    // Calls our Sprout AI backend to analyze the live farm data against the
+    // Organic Farming Library and answer the farmer's question with grounded
+    // recommendations.
+    async function askSproutAI(question) {
+      const farmContext = buildFarmContext();
+      const library = buildLibraryContext(question);
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
 
       const temp = reading && typeof reading.temperature === 'number' ? reading.temperature : null;
       const moist = reading && typeof reading.soilPercent === 'number' ? reading.soilPercent : null;
@@ -3966,6 +4327,7 @@ Organic Farming Library available:
 ${library.text}
 
 Instructions:
+<<<<<<< HEAD
 - If a plant leaf photo is attached:
   1. Identify visible symptoms (e.g. chlorosis, necrotic leaf spots, powdery mildew, foliar blight, aphid/caterpillar damage, rust).
   2. State the likely cause (fungal, bacterial, nutrient deficiency, or insect pest).
@@ -3997,6 +4359,25 @@ Instructions:
             messages: [{ role: 'user', content: contentBlocks }]
           })
         });
+=======
+- Ground your recommendations in the library excerpt above whenever it's relevant — refer to the guide by title when you use it (e.g. "Per the 'Bio-Pesticide Preparation Guide'...").
+- If no excerpt covers the question, you may draw on general organic-farming knowledge, but make clear you're not quoting a specific guide.
+- Always favor organic, chemical-free recommendations, consistent with the app's focus.
+- If a sensor reading is out of range, proactively connect your advice to it.
+- If there's a trend/rate-of-change anomaly (a metric moving unusually fast vs its own recent history), proactively mention it and suggest a likely cause and next step — this can matter even if the reading is still technically within range.
+- Be concise, warm, and practical — this is a chat bubble on a phone. 3-5 sentences unless the farmer asks for a full plan.${currentLang === 'ta' ? '\n- The farmer has switched the app to Tamil. Reply ENTIRELY in Tamil (தமிழ்), using simple, everyday words a farmer would use. You may keep technical units (°C, %, pH, mg/kg) and crop names in Latin script if there is no common Tamil term.' : ''}`;
+
+      // Calls our own Netlify Function (netlify/functions/sprout-ai.js) rather
+      // than calling an AI API directly, so the API key stays server-side.
+      const response = await fetch('/.netlify/functions/sprout-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system: systemPrompt,
+          messages: [{ role: 'user', content: question }]
+        })
+      });
+>>>>>>> f6861da8cd8db2a76ffc8174abc94c925873373d
 
         if (response.ok) {
           const data = await response.json();
